@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#1d1824">
+  <meta name="description" content="在浏览器里驾驶战机。选择巡航的像素版或高清版，查看电脑与手机的操作方法。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="巡航 Patrol">
+  <meta property="og:description" content="在浏览器里驾驶战机。选一个画面版本，直接起飞。">
+  <title>巡航 Patrol · 选择版本</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --night: #1a1722;
+      --paper: #fff2e4;
+      --muted: #ccbec7;
+      --faint: #baa9b7;
+      --line: #5a4657;
+      --key: #f4c499;
+      --panel: #28222f;
+      font: 400 16px/1.6 system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 0;
+      min-height: 100vh;
+      color: var(--paper);
+      background:
+        radial-gradient(ellipse 1000px 580px at 19% -170px, #80536180, transparent 100%),
+        radial-gradient(ellipse 580px 430px at 100% 5%, #51394e85, transparent 100%),
+        var(--night);
+    }
+    a { color: inherit; }
+    a:focus-visible { outline: 2px solid #ffe5c7; outline-offset: 4px; }
+    h1, h2, h3, p { margin: 0; }
+    .shell {
+      width: min(100% - clamp(32px, 8vw, 112px), 1260px);
+      margin-inline: auto;
+      padding-block: clamp(36px, 7.4vh, 88px) 56px;
+    }
+    .intro {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 11px 26px;
+      padding-block-end: clamp(25px, 4vw, 43px);
+      border-bottom: 1px solid var(--line);
+    }
+    h1 {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 0 .22em;
+      font-size: clamp(52px, 7.2vw, 99px);
+      line-height: 1.02;
+      font-weight: 850;
+      letter-spacing: .008em;
+    }
+    .wordmark {
+      color: var(--key);
+      font-size: .46em;
+      font-weight: 730;
+      letter-spacing: -.055em;
+    }
+    .intro p { grid-column: 1; color: var(--muted); font-size: clamp(14px, 1.4vw, 17px); }
+    .jump {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 44px;
+      padding: 6px 0 6px 13px;
+      color: var(--key);
+      font-size: 14px;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+    }
+    .deck {
+      display: grid;
+      grid-template-columns: minmax(0, 1.95fr) minmax(315px, 1fr);
+      gap: clamp(24px, 4vw, 60px);
+      align-items: start;
+      padding-block-start: 23px;
+    }
+    .section-title {
+      color: var(--paper);
+      font-size: 18px;
+      font-weight: 720;
+      letter-spacing: .045em;
+      margin-block-end: 13px;
+    }
+    .choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(12px, 1.6vw, 24px); }
+    .edition {
+      --accent: #ffd1a7;
+      --highlight: #895f5d;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid #674f62;
+      background: linear-gradient(153deg, #35292f, #27212d 70%);
+      color: var(--paper);
+      text-decoration: none;
+      border-radius: 12px;
+      box-shadow: 0 18px 44px #110d1680;
+    }
+    .edition.hd {
+      --accent: #c2e2da;
+      --highlight: #597b7d;
+      background: linear-gradient(153deg, #303138, #24212e 70%);
+    }
+    .edition:focus-visible, .edition:hover { border-color: var(--accent); }
+    .thumb {
+      position: relative;
+      aspect-ratio: 1.67;
+      overflow: hidden;
+      background: #383747;
+      border-bottom: 1px solid var(--line);
+    }
+    .thumb img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 52%; color: var(--muted); }
+    .thumb::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 -30px 36px -25px #1d142cb3; }
+    .edition-body {
+      flex: 1;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 6px;
+      padding: clamp(15px, 1.7vw, 24px);
+    }
+    .edition h3 { font-size: clamp(20px, 2.1vw, 29px); font-weight: 750; letter-spacing: .02em; line-height: 1.25; }
+    .edition p { color: var(--muted); font-size: 14px; }
+    .enter {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 42px;
+      margin-top: 14px;
+      padding: 8px 12px;
+      border: 1px solid color-mix(in srgb, var(--highlight) 75%, #1f1b29);
+      background: #251c2a5c;
+      border-radius: 6px;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+      transition: background-color .16s ease, color .16s ease;
+    }
+    .edition:hover .enter, .edition:focus-visible .enter { color: #201a24; background: var(--accent); border-color: var(--accent); }
+    .arrow { font-family: system-ui,sans-serif; font-size: 17px; line-height: 1; }
+    .instructions {
+      min-width: 0;
+      scroll-margin-top: 15px;
+    }
+    .briefing {
+      padding: 17px clamp(13px, 1.65vw, 22px) 14px;
+      background: #2c2532;
+      border: 1px solid #654f62;
+      border-radius: 12px;
+    }
+    .briefing > p { color: var(--muted); font-size: 14px; }
+    .briefing strong { color: var(--paper); font-weight: 680; }
+    table { width: 100%; margin-block: 11px 12px; border-collapse: collapse; color: var(--muted); font-size: 13px; text-align: left; }
+    th, td { padding: 7px 5px; vertical-align: baseline; border-bottom: 1px solid #504050; }
+    thead th { color: var(--faint); font-weight: 620; }
+    th:first-child { padding-left: 0; }
+    th:last-child, td:last-child { padding-right: 0; }
+    tbody th { width: 24%; color: var(--paper); font-weight: 650; white-space: nowrap; }
+    kbd {
+      display: inline-block;
+      padding: 0 4px;
+      border: 1px solid #7c677b;
+      color: var(--paper);
+      background: #221d2b;
+      border-radius: 3px;
+      font: inherit;
+      font-size: .9em;
+      line-height: 1.45;
+      white-space: nowrap;
+    }
+    .tactics { display: grid; gap: 7px; }
+    .tactics p { color: var(--muted); font-size: 13px; }
+    .tactics em { color: var(--key); font-style: normal; font-weight: 680; }
+    @media (min-width: 901px) { .jump { display: none; } }
+    @media (max-width: 900px) {
+      .deck { grid-template-columns: 1fr; gap: 28px; }
+      .section-title { font-size: 17px; }
+      table { font-size: 14px; }
+      .tactics p { font-size: 14px; }
+    }
+    @media (max-width: 560px) {
+      .shell { width: calc(100% - 32px); padding-block-start: 30px; }
+      .intro { column-gap: 5px; }
+      .intro p { grid-column: 1 / -1; }
+      .jump { grid-row: 1; align-self: end; font-size: 13px; padding-inline-start: 5px; }
+      .choices { grid-template-columns: 1fr; gap: 14px; }
+      .thumb { aspect-ratio: 2.03; }
+      .edition-body { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: 4px 12px; padding: 14px; }
+      .edition p { font-size: 13px; }
+      .enter { grid-column: 2; grid-row: 1 / span 2; align-self: center; width: auto; margin: 0; min-width: 80px; padding-inline: 9px; justify-content: center; white-space: nowrap; }
+      .enter .long { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .enter { transition: none; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="intro">
+      <h1>巡航 <span class="wordmark" lang="en">Patrol</span></h1>
+      <p>在浏览器里驾驶战机。选择你喜欢的画面版本，玩法和计分相同。</p>
+      <a class="jump" href="#controls">操作说明 <span aria-hidden="true">↓</span></a>
+    </header>
+    <div class="deck">
+      <section aria-labelledby="edition-title">
+        <h2 class="section-title" id="edition-title">选择版本</h2>
+        <div class="choices">
+          <a class="edition pixel" href="./pixel.html" aria-label="进入像素版">
+            <div class="thumb"><img src="./preview-pixel.jpg" width="1080" height="640" alt="像素战机飞过夕阳下的湖面和山峦"></div>
+            <div class="edition-body">
+              <h3>像素版</h3>
+              <p>复古色阶和像素纹理。</p>
+              <span class="enter"><span>进入<span class="long">像素版</span></span><span class="arrow" aria-hidden="true">→</span></span>
+            </div>
+          </a>
+          <a class="edition hd" href="./hd.html" aria-label="进入高清版">
+            <div class="thumb"><img src="./preview-hd.jpg" width="1080" height="640" alt="高清战机飞过夕阳下的湖面和山峦"></div>
+            <div class="edition-body">
+              <h3>高清版</h3>
+              <p>更细腻的地形、光影和座舱。</p>
+              <span class="enter"><span>进入<span class="long">高清版</span></span><span class="arrow" aria-hidden="true">→</span></span>
+            </div>
+          </a>
+        </div>
+      </section>
+      <section class="instructions" id="controls" aria-labelledby="controls-title">
+        <h2 class="section-title" id="controls-title">操作说明</h2>
+        <div class="briefing">
+          <p>打开游戏后，选择<strong>静音起飞</strong>或<strong>有声起飞</strong>。</p>
+          <table aria-label="电脑和手机操作对照">
+            <thead><tr><th scope="col">动作</th><th scope="col">电脑</th><th scope="col">手机</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">转向</th><td>移动鼠标</td><td>拖动屏幕</td></tr>
+              <tr><th scope="row">切换视角</th><td><kbd>空格</kbd></td><td>点左下角视角</td></tr>
+              <tr><th scope="row">翻滚</th><td>点击左键</td><td>点「翻滚」</td></tr>
+              <tr><th scope="row">加力</th><td>按住左键</td><td>按住「加力」</td></tr>
+              <tr><th scope="row">发射</th><td><kbd>右键</kbd> 或 <kbd>F</kbd></td><td>点「发射」</td></tr>
+            </tbody>
+          </table>
+          <div class="tactics">
+            <p>把机头对准目标，看到<em>「已进射程」</em>再发射。击落敌机 <strong>100&nbsp;分</strong>，打散飞鸟 <strong>50&nbsp;分</strong>。</p>
+            <p>第一次飞可选<strong>简单</strong>。飞行中点右上角的难度按钮，可暂停并切换难度。</p>
+            <p><a href="./guide.html" style="color:var(--key)">飞行手册</a> · <a href="./Patrol-Offline-Windows-Mac.zip" download style="color:var(--key)">下载电脑离线版</a></p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
