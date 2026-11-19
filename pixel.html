@@ -6,10 +6,7 @@
 <meta name="theme-color" content="#171727">
 <meta name="description" content="Patrol, an arcade flight toy over autumn lake country.">
 <title>巡航 · 落日余晖</title>
-<meta name="robots" content="noindex">
-<meta property="og:type" content="website">
-<meta property="og:title" content="巡航 · 落日余晖">
-<meta property="og:description" content="在落日下飞越秋色湖区，拦截敌机和飞鸟，从喷发火山旁掠过。">
+
 <style>
 /* IBM Plex Mono
 Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
@@ -330,6 +327,23 @@ kbd{font:inherit;color:var(--paper);border:1px solid #55495b;padding:1px 4px;mar
 #flightStatus *{pointer-events:none}
 .flightReadouts{display:flex;align-items:center;gap:6px}
 #rollStatus{padding:3px 5px;color:#272032;background:#ffd18d;border:1px solid #ffe0ae;text-shadow:none;white-space:nowrap}
+#health,#worldInfo,#loadoutHud{display:flex;align-items:center;gap:5px;background:#181826;border:1px solid #68576a;padding:3px 5px;color:#fff0d7;white-space:nowrap}
+#health{--health:100%;--hull:#9bd5c5;color:var(--hull);min-width:105px}
+#health.critical,#health.damaged{--hull:#ff8e79}
+#hullBar{width:33px;height:4px;background:#594555}
+#hullBar i{display:block;width:var(--health);height:100%;background:var(--hull)}
+#healthValue{min-width:2.7ch;text-align:right;font-variant-numeric:tabular-nums}
+#worldInfo{color:#f4c3a6}
+#worldTime{color:#fff1dc;font-variant-numeric:tabular-nums}
+#loadoutHud{align-self:start;flex-wrap:wrap;max-width:min(245px,86vw)}
+#flightStatus #weaponSwitch{pointer-events:auto;color:#f7e5c7;padding:3px 5px;min-height:26px;text-align:left}
+#weaponSwitch:disabled{cursor:default;color:#f7e5c7}
+#weaponSwitch:not(:disabled){background:#473450;outline:1px solid #826683}
+#combo,#loadoutNotice{color:#ffe0aa}
+#endFlight{border:1px solid #a4757d;color:#ffcfb7;padding:8px 10px}
+#endFlight:hover{background:#57384a}
+.modeChangeHint{margin:0 0 10px;color:#e8c8ba;font-size:10px;line-height:1.4}
+@media (max-width:550px){#notice{top:max(150px,calc(env(safe-area-inset-top) + 138px))}#touch button{padding:0 9px}#loadoutHud{font-size:9px}}
 .scoreLine{display:flex;gap:6px;align-items:center}
 .scoreCard{display:flex;align-items:baseline;gap:8px;background:#171727ed;border:1px solid #806a79;border-left:2px solid #ffc798;padding:4px 8px;min-width:92px;box-shadow:2px 2px #24203470}
 .scoreWord{font-weight:600;font-size:10px;letter-spacing:.08em;color:#f4cbb1}
@@ -362,7 +376,14 @@ kbd{font:inherit;color:var(--paper);border:1px solid #55495b;padding:1px 4px;mar
       </div>
       <div class="flightReadouts">
         <span id="shield" aria-label="Shield 3 of 3"><span data-i18n="SHIELD">SHIELD</span> <i class="charged"></i><i class="charged"></i><i class="charged"></i></span>
+        <span id="health" role="meter" aria-label="Hull integrity" data-i18n-aria="Hull integrity" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+          <b data-i18n="HULL">HULL</b><span id="hullBar" aria-hidden="true"><i></i></span><b id="healthValue">100</b>
+        </span>
         <span id="rollStatus" data-i18n="Rolling" hidden>Rolling</span>
+      </div>
+      <div id="worldInfo"><span id="region"></span><time id="worldTime"></time></div>
+      <div id="loadoutHud"><button type="button" id="weaponSwitch" aria-keyshortcuts="Q" data-i18n-title="Switch weapon (Q)" title="Switch weapon (Q)"></button>
+        <b id="combo" hidden></b><span id="loadoutNotice" hidden></span>
       </div>
     </div>
     <button id="difficultyButton" type="button" hidden data-i18n-aria="Flight settings" aria-label="Flight settings" aria-haspopup="dialog" aria-controls="difficultyMenu" aria-expanded="false" aria-keyshortcuts="Escape" data-i18n-title="Flight settings (Esc)" title="Flight settings (Esc)"><span id="difficultyLabel">Easy</span><span aria-hidden="true">▾</span></button>
@@ -386,14 +407,15 @@ kbd{font:inherit;color:var(--paper);border:1px solid #55495b;padding:1px 4px;mar
         <button type="button" id="launchMuted" data-i18n="Fly muted" disabled>Fly muted</button>
       </div>
       <nav id="menuLinks" data-i18n-aria="Patrol links" aria-label="Patrol links">
-        <a id="hubLink" data-i18n="Game hub" href="./index.html">游戏大厅</a>
         <a id="fieldGuide" data-i18n="Field guide" href="./guide.html">Field guide</a>
+        <a id="hubLink" data-i18n="Game hub" href="./index.html">Game hub</a>
         <button id="copyLink" type="button" hidden>Copy link</button>
         <a id="editionLink" href="./hd.html" data-i18n="Play HD edition">Play HD edition</a>
         <div id="titleLanguage" class="languageChoices" role="group" data-i18n-aria="Language" aria-label="Language">
           <button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">简体中文</button>
           <button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
         </div>
+        <button type="button" id="rankings" data-i18n="Leaderboards">Leaderboards</button>
       </nav>
       <div id="loading" role="status">
         <div id="progress" role="progressbar" data-i18n-aria="Generating terrain" aria-label="Generating terrain" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="fill"></div></div>
@@ -411,8 +433,10 @@ kbd{font:inherit;color:var(--paper);border:1px solid #55495b;padding:1px 4px;mar
           <button type="button" data-difficulty="ace" aria-pressed="false">Ace</button>
         </div>
         <p class="modeHint" id="pauseDifficultyHint"></p>
+        <p class="modeChangeHint" data-i18n="Changing difficulty ends this flight.">Changing difficulty ends this flight.</p>
         <div class="pauseActions">
           <button type="button" id="resumeFlight" class="launch"><span data-i18n="Resume flight">Resume flight</span> <span class="arrow" aria-hidden="true">▶</span></button>
+          <button type="button" id="endFlight" data-i18n="End flight">End flight</button>
           <div id="pauseLanguage" class="languageChoices" role="group" data-i18n-aria="Language" aria-label="Language">
           <button type="button" data-language="zh" aria-pressed="true" lang="zh-CN">简体中文</button>
           <button type="button" data-language="en" aria-pressed="false" lang="en">English</button>
@@ -424,12 +448,13 @@ kbd{font:inherit;color:var(--paper);border:1px solid #55495b;padding:1px 4px;mar
       <button type="button" id="roll" aria-keyshortcuts="R" data-i18n="Roll">Roll</button>
       <button type="button" id="burn" data-i18n="Burn">Burn</button>
       <button type="button" id="fire" data-i18n="Fire">Fire</button>
+      <button type="button" id="dash" aria-keyshortcuts="E" data-i18n="Dodge">Dodge</button>
     </div>
   </div>
   <div id="bar">
     <button type="button" id="viewButton" data-i18n-title="Change view" title="Change view"><kbd data-i18n="Space">Space</kbd> <span id="view">Chase</span></button>
     <div id="hint">
-      <span data-i18n="Mouse steer">Mouse steer</span><span><kbd>R</kbd> / <kbd data-i18n="Click">Click</kbd> <span data-i18n="roll">roll</span> <kbd data-i18n="Hold">Hold</kbd> <span data-i18n="burn">burn</span></span><span><span class="secondaryHint"><kbd data-i18n="RMB">RMB</kbd> / </span><kbd>F</kbd> <span data-i18n="fire">fire</span></span>
+      <span data-i18n="Mouse steer">Mouse steer</span><span><kbd>R</kbd> / <kbd data-i18n="Click">Click</kbd> <span data-i18n="roll">roll</span> <kbd data-i18n="Hold">Hold</kbd> <span data-i18n="burn">burn</span></span><span><span class="secondaryHint"><kbd data-i18n="RMB">RMB</kbd> / </span><kbd>F</kbd> <span data-i18n="fire">fire</span></span><span class="secondaryHint"><kbd>E</kbd> <span data-i18n="Dodge">Dodge</span> <kbd>Q</kbd> <span data-i18n="Switch">Switch</span></span>
     </div>
     <span id="touchHint" data-i18n="Drag to steer">Drag to steer</span>
     <div id="status">
@@ -465,15 +490,15 @@ const patrolChinese=Object.freeze({
   "Easy":"简单",
   "Standard":"标准",
   "Ace":"王牌",
-  "Explore the lake, mountains, and volcano without taking damage.":"无敌袭、无伤害，自由飞越湖区和火山。",
-  "Steadier steering, forgiving aim, and faster missile reloads.":"转向更稳、瞄准更宽松，导弹补充更快。",
-  "Regular patrols, staggered bird dives, and balanced aim assist.":"常规敌袭、错峰俯冲和适中的瞄准辅助。",
-  "Faster attacks, tighter aim assist, and slower shield recovery.":"敌袭更快、瞄准要求更高，护盾恢复较慢。",
+  "Explore the map without damage, with ground avoidance.":"无伤害且自动避障，自由探索地图。",
+  "Ground avoidance, forgiving aim, and faster missile reloads.":"自动避障、瞄准更宽松、补弹更快。生命耗尽仍会坠毁。",
+  "Manual ground avoidance. Watch for storms and hostile dragons.":"手动避障，留心风暴和主动攻击的东方龙。",
+  "Manual ground avoidance, stronger enemies, and falling meteors.":"手动避障，敌袭更强，还会遇到天降陨石。",
   "Fly with sound":"有声起飞",
   "Fly muted":"静音起飞",
-  "Game hub":"游戏大厅",
   "Field guide":"飞行手册",
   "Patrol links":"巡航链接",
+  "Game hub":"游戏大厅",
   "Play pixel edition":"切换像素版",
   "Play HD edition":"切换高清版",
   "Copy link":"复制链接",
@@ -505,6 +530,49 @@ const patrolChinese=Object.freeze({
   "Shield {count} of 3":"护盾 {count}/3",
   "Missiles {count} of 4":"导弹 {count}/4",
   "Points gained {count}":"加 {count} 分",
+  "Leaderboards":"榜单",
+  "End flight":"结束本局",
+  "Changing difficulty ends this flight.":"切换难度将结算本局。",
+  "HULL":"机体",
+  "Hull integrity":"机体生命值",
+  "Snow range":"雪山",
+  "Dune sea":"沙漠",
+  "Autumn country":"秋色湖区",
+  "Lake country":"湖面",
+  "Switch":"换武器",
+  "Switch weapon (Q)":"切换武器（Q）",
+  "Homing missiles":"追踪导弹",
+  "Ion lance":"离子长矛",
+  "Triad rockets":"三联火箭",
+  "Airframe upgrade":"飞机组件",
+  "Extended wings fitted":"青光扩展翼已安装",
+  "Tall fins fitted":"金色高尾翼已安装",
+  "Nova engines fitted":"紫光新星引擎已安装",
+  "Salvage nearby":"附近有掉落物",
+  "Dodge":"闪步",
+  "Pulse dodge":"脉冲闪步",
+  "Afterburner roll":"加力翻滚",
+  "Dodge recharging":"闪步冷却中",
+  "FIGHTER HIT":"敌机命中",
+  "BIRD STRIKE":"飞鸟撞击",
+  "LAVA HIT":"熔浆击中",
+  "TERRAIN COLLISION":"撞地坠毁",
+  "WATER COLLISION":"撞水坠毁",
+  "METEOR INCOMING":"陌石正在坠落",
+  "TORNADO AHEAD":"前方龙卷风",
+  "BLIZZARD AHEAD":"前方暴风雪",
+  "METEOR STRIKE":"陌石撞击",
+  "TORNADO STRIKE":"龙卷风受伤",
+  "BLIZZARD STRIKE":"暴风雪受伤",
+  "DRAGON SIGHTED":"发现东方龙",
+  "DRAGON RAM INCOMING":"小心龙的撞击",
+  "DRAGON CLAW INCOMING":"小心龙爪",
+  "DRAGON BREATH INCOMING":"小心龙息",
+  "DRAGON RAM":"龙身撞击",
+  "DRAGON CLAW":"龙爪击中",
+  "DRAGON BREATH":"龙息击中",
+  "AIRFRAME DAMAGED":"机体受损",
+  "LOW HULL":"机体严重受损",
   "PULL UP":"抬头拉升",
   "LOW ALT":"高度过低",
   "BOOST OFFLINE":"加力暂不可用",
@@ -563,10 +631,14 @@ function patrolCount(english,count) {
 const PATROL_WORLD_SIZE = 18000;
 const PATROL_HEIGHT_RES = 1024;
 const PATROL_VOLCANO = Object.freeze({x: 3660, z: 4860});
+const PATROL_BIOMES = Object.freeze({
+  snow:Object.freeze({x:-3960,z:4650,spanX:2840,spanZ:3140}),
+  desert:Object.freeze({x:6200,z:-220,spanX:2600,spanZ:2320})
+});
 const PATROL_SUN = [0.348, 0.120, Math.sqrt(1 - 0.348 ** 2 - 0.120 ** 2)];
 
 function patrolBuildTerrain(message, post) {
-  const {mode, first, last, size, dim, sun, volcano} = message;
+  const {mode, first, last, size, dim, sun, volcano, biomes} = message;
   const width = size / dim;
   const wrap = (n, count) => ((n % count) + count) % count;
   const smooth = (a, b, x) => {
@@ -693,7 +765,21 @@ function patrolBuildTerrain(message, post) {
     const shelf = (shore + cape + islandA + islandB + islandC - 1);
     const coastalBar = (1 - smooth(0, .17, Math.abs(shelf))) * (shingle - .47) * 4.1;
     const bed = 360 * shelf + 5 * (grit - .5) + coastalBar;
-    const lakeLandscape = ground * smooth(0, .49, shelf) + bed * (1 - smooth(.14, .52, shelf));
+    let lakeLandscape = ground * smooth(0, .49, shelf) + bed * (1 - smooth(.14, .52, shelf));
+    const sand = biomes.desert;
+    const dx = delta(x - sand.x), dz = delta(z - sand.z);
+    if (lakeLandscape > 18 && Math.abs(dx)<sand.spanX*1.25 && Math.abs(dz)<sand.spanZ*1.25) {
+      const climate = Math.hypot(dx/sand.spanX,dz/sand.spanZ)
+        + .068*Math.sin(dx*.0031+dz*.0021)*Math.cos(dx*.0017-dz*.0034);
+      const weight = (1-smooth(.58,1.15,climate))*smooth(18,78,lakeLandscape)*(1-smooth(540,790,lakeLandscape));
+      const downwind = dx*.91 + dz*.414, crosswind = dz*.91 - dx*.414;
+      const curve = .88*Math.sin(crosswind*.0081) + 1.24*Math.sin(crosswind*.0024);
+      const crest = Math.pow(.5+.5*Math.sin(downwind*.024 + curve + (rolling-.5)*3.6),1.78);
+      const smaller = Math.pow(.5+.5*Math.sin(downwind*.060+curve*1.8 + fine*2.7),1.32);
+      const amplitude = 47 + 37*Math.sin(crosswind*.0017)**2;
+      const dune = 48 + lakeLandscape*.76 + crest*amplitude + smaller*10;
+      lakeLandscape += (dune-lakeLandscape)*weight*.90;
+    }
     const volcanic = volcanicTerrain(x, z, fine, grit);
     return Math.min(1588, Math.max(-415, volcanic ? Math.max(lakeLandscape, volcanic.elevation) : lakeLandscape));
   }
@@ -771,7 +857,7 @@ function patrolBuildTerrain(message, post) {
 async function patrolTerrain(onProgress) {
   const size = PATROL_WORLD_SIZE;
   const dim = PATROL_HEIGHT_RES;
-  const params = {dim, size, sun: PATROL_SUN, volcano: PATROL_VOLCANO};
+  const params = {dim, size, sun: PATROL_SUN, volcano: PATROL_VOLCANO, biomes: PATROL_BIOMES};
   let shown = 0;
   const report = (value) => {
     shown = Math.max(shown, value);
@@ -869,6 +955,10 @@ uniform vec3 uUp;
 uniform vec3 uSun;
 uniform vec2 uLens;
 uniform float uTime;
+uniform float uDaylight;
+uniform float uNoon;
+uniform int uWeatherCount;
+uniform vec4 uWeather[4];
 uniform vec3 uJet;
 uniform vec2 uJetHeading;
 uniform float uJetSpeed;
@@ -913,6 +1003,18 @@ vec4 sampleWorld(vec2 xz) {
   return textureLod(uTerrain, xz / SIZE, 0.);
 }
 
+float climate(vec2 point, vec2 center, vec2 scale) {
+  vec2 p = mod(point-center+SIZE*.5,SIZE)-SIZE*.5;
+  if (any(greaterThan(abs(p),scale*1.19))) return 0.;
+  float coast = .068*sin(p.x*.0031+p.y*.0021)*cos(p.x*.0017-p.y*.0034);
+  return 1.-smoothstep(.58,1.15,length(p/scale)+coast);
+}
+
+vec2 climates(vec2 point) {
+  return vec2(climate(point,vec2(-3960.,4650.),vec2(2840.,3140.)),
+    climate(point,vec2(6200.,-220.),vec2(2600.,2320.)));
+}
+
 float terrainHeight(vec2 xz) {
   return unpackHeight(sampleWorld(xz).rg);
 }
@@ -921,6 +1023,44 @@ vec3 horizon(float glare) {
   vec3 lavender = vec3(.667,.592,.718);
   vec3 peach = vec3(.981,.748,.576);
   return mix(lavender, peach, stepped(pow(glare, 3.0), 12.));
+}
+
+vec3 gradeSky(vec3 day, vec3 ray) {
+  float y = clamp(ray.y,0.,1.);
+  vec3 blue = mix(vec3(.606,.783,.918),vec3(.119,.322,.656),pow(y,.47));
+  day = mix(day,blue,uNoon*.84);
+  if (uDaylight > .999) return day;
+  vec3 night = mix(vec3(.118,.130,.244),vec3(.024,.033,.091),smoothstep(0.,.71,y));
+  if (ray.y > .015) {
+    vec2 field = vec2(atan(ray.x,ray.z),asin(clamp(ray.y,-1.,1.)))*158.;
+    vec2 cell = floor(field);
+    float seed = hash21(cell);
+    if (seed>.981) {
+      vec2 offset = vec2(hash21(cell+19.3),hash21(cell+41.7))*.51+.245;
+      float form = 1.-smoothstep(.030,.255,length(fract(field)-offset));
+      float twinkle = .57+.43*sin(2.8*uTime + seed*147.);
+      night += form*(.34+.46*twinkle)*smoothstep(.015,.22,ray.y)*mix(vec3(.89,.88,1.0),vec3(.61,.77,1.0),twinkle);
+    }
+  }
+  const vec3 moon = vec3(-.277,.316,.907);
+  float lunar = max(0.,dot(ray,moon));
+  night += vec3(.215,.279,.471)*pow(lunar,192.)*.58;
+  night = mix(night,vec3(.771,.850,.986),smoothstep(.99911,.99932,lunar));
+  return mix(night,day,uDaylight);
+}
+
+vec3 gradeSurface(vec3 color, vec3 p, bool geothermal) {
+  color = mix(color,color*vec3(1.005,1.035,1.091)+vec3(.020,.025,.029),uNoon*.74);
+  if (uDaylight > .999) return color;
+  vec3 twilight = vec3(.044,.053,.095) + color*vec3(.270,.319,.481);
+  if (geothermal) {
+    vec2 offset = mod(p.xz-vec2(3660.,4860.)+SIZE*.5,SIZE)-SIZE*.5;
+    if (dot(offset,offset)<2250000.) {
+      float heat = textureLod(uVolcanic,p.xz/SIZE,0.).r;
+      twilight = mix(twilight,max(color*vec3(1.20,.91,.73),vec3(.50,.115,.021)*heat),smoothstep(.019,.47,heat));
+    }
+  }
+  return mix(twilight,color,uDaylight);
 }
 
 vec3 skyColor(vec3 ray, bool streaks) {
@@ -944,14 +1084,15 @@ vec3 skyColor(vec3 ray, bool streaks) {
     color = mix(vec3(1.,.738,.441), vec3(1.,.937,.658), stepped(smoothstep(.065,.16,ray.y), 7.));
     if (ray.y < .114 && mod(floor(ray.y * 390.0), 7.0) < 1.0) color *= vec3(.98,.88,.83);
   }
-  return color;
+  return gradeSky(color,ray);
 }
 
 vec3 aerial(vec3 color, vec3 ray, float depth, float altitude) {
   float glare = dot(ray, uSun) * .5 + .5;
   float amount = (1.0 - exp(-depth * (.000052 + .000035 * pow(glare, 3.0))));
   amount *= mix(1., .72, smoothstep(0.,1450.,altitude));
-  return mix(color, horizon(glare), stepped(amount * .92, 24.));
+  vec3 mist = mix(horizon(glare),vec3(.632,.763,.877),uNoon*.79);
+  return mix(color,mist,stepped(amount * .92,24.));
 }
 
 float cloudMap(vec2 p) {
@@ -975,6 +1116,75 @@ vec2 slab(vec3 ro, vec3 rd, float low, float high) {
   }
   vec2 t = (vec2(low, high) - ro.y) / rd.y;
   return vec2(max(NEAR, min(t.x,t.y)), min(FAR, max(t.x,t.y)));
+}
+
+vec3 localWeather(vec3 color, vec3 ro, vec3 rd, float sceneDepth) {
+  for (int i = 0; i < 2; i++) {
+    if (i >= uWeatherCount) break;
+    vec4 cell = uWeather[i*2];
+    vec4 scale = uWeather[i*2+1];
+    bool sand = cell.w < 1.5;
+    float radius = scale.x;
+    vec2 horizontal = ro.xz-cell.xz;
+    float a = dot(rd.xz,rd.xz);
+    float b = dot(horizontal,rd.xz);
+    float c = dot(horizontal,horizontal)-radius*radius*1.44;
+    vec2 range = slab(ro,rd,cell.y,cell.y+scale.y);
+    if (a > .00004) {
+      float discriminant = b*b-a*c;
+      if (discriminant <= 0.) continue;
+      float crossing = sqrt(discriminant);
+      range.x = max(range.x,(-b-crossing)/a);
+      range.y = min(range.y,(-b+crossing)/a);
+    } else if (c > 0.) continue;
+    range.x = max(range.x,NEAR);
+    range.y = min(range.y,sceneDepth);
+    if (range.y <= range.x) continue;
+    float stepLength = (range.y-range.x)*.166666667;
+    float span = clamp(stepLength/radius,0.,1.5);
+    vec3 blend = vec3(0.);
+    float seen = 0.;
+    for (int sampleIndex = 0; sampleIndex < 6; sampleIndex++) {
+      float t = range.x+stepLength*(float(sampleIndex)+.5);
+      vec3 p = ro+rd*t;
+      float y = (p.y-cell.y)/scale.y;
+      vec2 local = (p.xz-cell.xz)/radius;
+      float boundary = smoothstep(.005,sand?.069:.10,y)*(1.-smoothstep(.87,1.,y));
+      float density, streak;
+      vec3 particleColor;
+      if (sand) {
+        float curl = scale.z*1.93+y*6.6;
+        vec2 tilt = vec2(.210*sin(curl),.170*cos(curl))*smoothstep(.05,.99,y);
+        vec2 swirl = local-tilt;
+        float width = .18+.74*pow(y,1.15);
+        float radial = length(swirl);
+        float taper = 1.-smoothstep(width*.59,width+.075,radial);
+        float spin = atan(swirl.y+.00011,swirl.x+.00007);
+        float gust = smallNoise(swirl*5.9+vec2(y*5.7,scale.z*1.45));
+        streak = .5+.5*sin(spin*3.0 + y*21.0 - scale.z*9.1 + gust*2.5);
+        float skirt = (1.-smoothstep(.39,1.12,length(local)))*(1.-smoothstep(.014,.18,y));
+        density = taper*boundary*(.45+.57*streak)*(.55+.45*gust)*2.62+skirt*(.39+.51*gust);
+        float cheeks = smoothstep(-.50,.31,dot(swirl,uSun.xz));
+        particleColor = mix(vec3(.377,.269,.214),vec3(.927,.699,.440),.21+.44*streak+.27*cheeks);
+      } else {
+        float radial = length(local*vec2(1.,.88));
+        float apron = 1.-smoothstep(.48,1.14,radial+.095*sin(y*9.1));
+        float slant = y+local.x*.79-local.y*.35-scale.z*.125;
+        float gust = smallNoise(vec2(slant*10.5,local.y*5.6+scale.z*.62));
+        float snow = .5+.5*sin(slant*78.0 + local.y*39.0 + gust*4.8);
+        streak = smoothstep(.75,.98,snow)*smoothstep(.46,.83,gust);
+        density = apron*boundary*(.21+gust*.41+streak*.38);
+        particleColor = mix(vec3(.605,.727,.841),vec3(.945,.971,1.),.42+streak*.58);
+      }
+      float opacity = min(.87,density*span*scale.w);
+      vec3 night = particleColor*(sand?vec3(.62,.60,.79):vec3(.53,.64,.91));
+      blend += mix(night,particleColor,uDaylight)*(1.-seen)*opacity;
+      seen += (1.-seen)*opacity;
+      if (seen > .975) break;
+    }
+    color = color*(1.-seen)+blend;
+  }
+  return color;
 }
 
 float traceCloud(vec3 ro, vec3 rd) {
@@ -1070,6 +1280,19 @@ vec3 groundColor(vec3 p, float depth) {
   color = mix(color, rock, stepped(stone,5.));
   float snow = smoothstep(936.0,1081.0,y + (leafy-.5)*102.0 + facing*61.0) * (1. - .33 * smoothstep(.65,1.11,steep));
   color = mix(color,mix(vec3(.812,.796,.816),vec3(.959,.883,.803),stepped(leafy,5.)), stepped(snow,7.));
+
+  vec2 ecology = climates(p.xz);
+  if (ecology.y>.003) {
+    float drift = ecology.y * smoothstep(18.,73.,y) * (1.-smoothstep(522.,787.,y));
+    float ripple = sin(p.x*.21+p.z*.11+3.3*leafy+fine);
+    vec3 sandDunes = mix(vec3(.627,.341,.180),vec3(.952,.719,.397),stepped(.32+.52*leafy+facing*.25,6.));
+    sandDunes *= .963+.037*ripple*(1.-smoothstep(1500.,5700.,depth));
+    color = mix(color,sandDunes,stepped(drift,8.));
+  }
+  float alpine = ecology.x*smoothstep(536.-146.*ecology.x,825.-145.*ecology.x,y+84.*leafy)
+    *(1.-.66*smoothstep(.43,.91,steep))*(.68+.32*smoothstep(.21,.74,fine));
+  vec3 driftSnow = mix(vec3(.663,.757,.851),vec3(.936,.952,.972),stepped(leafy+facing*.21,6.));
+  color = mix(color,driftSnow,stepped(alpine,8.));
 
   vec2 volcanic = textureLod(uVolcanic, p.xz / SIZE, 0.).rg;
   float heat = volcanic.r;
@@ -1207,7 +1430,7 @@ vec3 cloudColor(vec3 p, vec3 ray, float depth) {
   float grain = stepped(smallNoise(p.xz / scale + p.y*.021) - .12,5.);
   color *= .89 + grain * .16;
   color *= 1.0 - stepped(planeShadow(p),4.)*.22;
-  return aerial(color,ray,depth,p.y);
+  return gradeSurface(aerial(color,ray,depth,p.y),p,false);
 }
 
 void main() {
@@ -1222,13 +1445,14 @@ void main() {
   vec3 color;
   if (groundDepth < FAR) {
     color = p.y < 2.1 ? waterColor(p,ray,depth) : groundColor(p,depth);
-    color = aerial(color,ray,depth,p.y);
+    color = gradeSurface(aerial(color,ray,depth,p.y),p,p.y>2.1);
   } else if (cloudDepth < FAR) {
     color = cloudColor(p,ray,depth);
   } else {
     color = skyColor(ray,true);
   }
 
+  color = localWeather(color,uCamera,ray,depth);
   outColor = vec4(clamp(floor(color * 63.0 + bayer) / 63.0, 0.0, 1.0),1.0);
   float viewZ = max(NEAR, depth * dot(ray,uForward));
   gl_FragDepth = depth < FAR ? clamp(FAR / (FAR - NEAR) - FAR * NEAR / ((FAR - NEAR) * viewZ),0.0,1.0) : 1.0;
@@ -1259,9 +1483,10 @@ async function createWorld(canvas, onProgress = () => {}) {
 
   const size = PATROL_WORLD_SIZE;
   const dim = PATROL_HEIGHT_RES;
-  const sun = PATROL_SUN;
+  const sun = [...PATROL_SUN];
   const locations = {};
-  const names = ["Terrain", "Cloud", "Volcanic", "Camera", "Forward", "Up", "Right", "Sun", "Lens", "Time", "Jet", "JetHeading", "JetSpeed", "Marks[0]", "WaterMarks[0]"];
+  const names = ["Terrain", "Cloud", "Volcanic", "Camera", "Forward", "Up", "Right", "Sun", "Lens", "Time", "Daylight", "Noon",
+    "WeatherCount", "Weather[0]", "Jet", "JetHeading", "JetSpeed", "Marks[0]", "WaterMarks[0]"];
   for (const name of names) locations[name] = gl.getUniformLocation(program, "u" + name);
 
   function createTexture(internal, format, data, resolution) {
@@ -1279,6 +1504,7 @@ async function createWorld(canvas, onProgress = () => {}) {
   const cloud = createTexture(gl.R8, gl.RED, terrainData.cloud, dim / 2);
   const volcanic = createTexture(gl.RG8, gl.RG, terrainData.volcanic, dim);
   const vao = gl.createVertexArray();
+  const weatherData = new Float32Array(16);
   const marks = new Float32Array(16);
   const waterMarks = new Float32Array(16);
   const wrap = (i) => (i + dim) & (dim - 1);
@@ -1301,8 +1527,34 @@ async function createWorld(canvas, onProgress = () => {}) {
   const height = (x, z) => sample(x, z, terrainData.heights, 1);
   const heat = (x, z) => sample(x, z, terrainData.volcanic, 2) / 255;
 
+  function biome(x, z) {
+    const y = height(x,z);
+    if (y < 0) return "water";
+    function climate(zone) {
+      const dX = x-zone.x-Math.round((x-zone.x)/size)*size;
+      const dZ = z-zone.z-Math.round((z-zone.z)/size)*size;
+      const shore = .068*Math.sin(dX*.0031+dZ*.0021)*Math.cos(dX*.0017-dZ*.0034);
+      const p = Math.max(0, Math.min(1, (Math.hypot(dX/zone.spanX,dZ/zone.spanZ)+shore-.58)/.57));
+      return 1-p*p*(3-2*p);
+    }
+    const cold = climate(PATROL_BIOMES.snow);
+    if (cold > .39 && y > 590-133*cold) return "snow";
+    if (y >= 25 && y < 765 && climate(PATROL_BIOMES.desert) > .42) return "desert";
+    return "autumn";
+  }
+
   function draw(camera, state, impacts = []) {
     const lens = Math.tan(camera.fov * .5);
+    const clock = Number.isFinite(state.clockMinutes) ? state.clockMinutes : 1005;
+    const arc = Math.sin((clock-360)*Math.PI/720);
+    const solar = Math.max(0,Math.min(1,(arc+.135)/.29));
+    const daylight = solar*solar*(3-2*solar);
+    const noon = Math.max(0,Math.min(1,(arc-.36)/.53));
+    // At dusk the original sun bearing remains the reference for the baked shadows.
+    sun[1] = Math.max(.065,arc*.278 + Math.max(0,arc-.32)*.47+.03);
+    const azimuthGain = Math.sqrt((1-sun[1]**2)/(1-PATROL_SUN[1]**2));
+    sun[0] = PATROL_SUN[0]*azimuthGain;
+    sun[2] = PATROL_SUN[2]*azimuthGain;
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.useProgram(program);
     gl.bindVertexArray(vao);
@@ -1327,6 +1579,19 @@ async function createWorld(canvas, onProgress = () => {}) {
     gl.uniform3fv(locations.Sun, sun);
     gl.uniform2f(locations.Lens, lens * canvas.width / canvas.height, lens);
     gl.uniform1f(locations.Time, state.time);
+    gl.uniform1f(locations.Daylight,daylight);
+    gl.uniform1f(locations.Noon,noon);
+    let weatherCount=0;
+    for (const cell of state.weather||[]) {
+      if (cell.strength <= .003 || weatherCount >= 2) continue;
+      const i = weatherCount*8;
+      weatherData.set(cell.pos,i);
+      weatherData[i+3]=cell.kind==="tornado"?1:2;
+      weatherData.set([cell.radius,cell.height,cell.age,cell.strength],i+4);
+      weatherCount++;
+    }
+    gl.uniform1i(locations.WeatherCount,weatherCount);
+    if (weatherCount) gl.uniform4fv(locations["Weather[0]"],weatherData);
     gl.uniform3fv(locations.Jet, state.pos);
     gl.uniform2f(locations.JetHeading, Math.sin(state.heading), Math.cos(state.heading));
     gl.uniform1f(locations.JetSpeed, state.speed);
@@ -1352,7 +1617,7 @@ async function createWorld(canvas, onProgress = () => {}) {
   }
 
   onProgress(1);
-  return {gl, height, draw, waterLevel: 0, size, sun, radar: height, volcano: {...PATROL_VOLCANO, heat}};
+  return {gl, height, draw, biome, biomes:PATROL_BIOMES, waterLevel: 0, size, sun, radar: height, volcano: {...PATROL_VOLCANO, heat}};
 }
 
 
@@ -1649,6 +1914,109 @@ function createAirframe(gl) {
     const next=v=>[v[0]*.978,v[1]-.011,v[2]+.19];
     quad(model,a,next(a),next(b),b,i<4?'stone':'mist',.3);
   }
+  const upgradeStyles=[
+    null,
+    {hull:[.66,.83,.97], plate:[.135,.234,.327], shade:[.071,.105,.176],
+      trim:[.16,.90,1], beam:[.79,.99,1], plasma:[.12,.75,.98], tip:[14.85,.24,-2.62]},
+    {hull:[.96,.75,.57], plate:[.325,.251,.171], shade:[.148,.106,.110],
+      trim:[1,.60,.185], beam:[1,.93,.66], plasma:[1,.48,.12], tip:[15.65,.19,-3.04]},
+    {hull:[.72,.64,1], plate:[.208,.176,.367], shade:[.116,.093,.228],
+      trim:[.73,.55,1], beam:[.98,.91,1], plasma:[.60,.34,1], tip:[16.40,.16,-3.52]}
+  ];
+  const upgradedWingTips=upgradeStyles.map(style=>style
+    ? [[-style.tip[0],style.tip[1],style.tip[2]],style.tip] : wingTipOffsets);
+  const grade=level=>Math.min(3,Math.max(0,Math.floor(Number(level)||0)));
+  const wingTips=level=>upgradedWingTips[grade(level)];
+
+  function armorMesh(level,stride) {
+    const paint=upgradeStyles[level], output=model.slice();
+    for (let i=0;i<output.length;i+=stride) {
+      const [r,g,b]=output.slice(i+6,i+9), emission=output[i+9];
+      const canopy=emission>.60&&r>g&&g>b&&output[i+2]>0;
+      if (canopy) continue;
+      const warm=r>g+.14&&g>b*.90;
+      if (warm) {
+        const color=output[i+2]<-12.55?paint.beam:paint.trim;
+        for (let k=0;k<3;k++) output[i+6+k]=color[k]*(.55+.45*r);
+        output[i+9]=.81;
+      } else {
+        const value=.054+.68*(r*.28+g*.50+b*.22);
+        for (let k=0;k<3;k++) output[i+6+k]=paint.hull[k]*value;
+      }
+    }
+    const blend=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+    for (const side of [-1,1]) {
+      const mirror=([x,y,z])=>[side*x,y,z];
+      const tri=(a,b,c,color,e=0)=>side===1
+        ? face(output,a,b,c,color,e) : face(output,mirror(a),mirror(c),mirror(b),color,e);
+      const panel=(a,b,c,d,color,e=0)=>{tri(a,b,c,color,e);tri(a,c,d,color,e);};
+      function raised(a,y=.047) { return [a[0],a[1]+y,a[2]]; }
+      function plate(rim,center) {
+        const lower=a=>raised(a,-.38);
+        for (let i=0;i<rim.length;i++) {
+          const a=rim[i], b=rim[(i+1)%rim.length];
+          tri(a,b,center,i===0?paint.plate:paint.shade);
+          tri(lower(b),lower(a),lower(center),paint.shade);
+          panel(b,a,lower(a),lower(b),paint.plate);
+        }
+      }
+      function band(a,b,c,lo,hi,thickness,color) {
+        const aa=blend(a,b,lo), bb=blend(a,b,hi);
+        const rimP=raised(blend(aa,c,.04)), rimQ=raised(blend(bb,c,.04));
+        panel(rimP,rimQ,raised(blend(bb,c,thickness)),raised(blend(aa,c,thickness)),color,.91);
+      }
+      const tip=paint.tip;
+      const leading=[4.85,.45,4.10], heel=[tip[0]-1.53,-.095,-6.15-level*.35];
+      const wingRoot=[6.3,.31,-4.96], center=[8.95,.57,-2.62];
+      plate([leading,tip,heel,wingRoot],center);
+      band(leading,tip,center,.14,.82,.29,paint.trim);
+      band(tip,heel,center,.22,.68,.27,paint.beam);
+      const capBefore=[tip[0]-.53,tip[1]-.1,tip[2]+.14], capAfter=[tip[0]-.49,tip[1]-.12,tip[2]-2.25];
+      const capTop=[tip[0]+.03,tip[1]+1.81+level*.35,tip[2]-1.14];
+      const capBack=[tip[0]-.18,tip[1]+1.91+level*.37,tip[2]-1.94];
+      panel(capBefore,capAfter,capBack,capTop,paint.shade);
+      panel(raised(capBefore,-.15),raised(capAfter,-.15),raised(capBack,-.15),raised(capTop,-.15),paint.plate);
+      panel(blend(capBefore,capTop,.72),blend(capAfter,capBack,.72),capBack,capTop,paint.trim,.88);
+
+      if (level>=2) {
+        // The metal sleeve and inner light follow the existing twin nozzles.
+        const x=side*2.32, n=12;
+        const heelRing=circle(x,.03,-13.25,1.36,1.20,n);
+        const shoulder=circle(x,.03,-11.62,1.51,1.35,n);
+        const throat=circle(x,.03,-13.30,1.07,.96,n);
+        skin(output,heelRing,shoulder,[paint.plate,paint.shade,paint.plate]);
+        for (let i=0;i<n;i++) {
+          const j=(i+1)%n, lit=(i%3!==0);
+          quad(output,heelRing[j],heelRing[i],throat[i],throat[j],lit?paint.trim:paint.shade,lit?.95:.3);
+          const c=blend(heelRing[i],shoulder[i],.44), d=blend(heelRing[j],shoulder[j],.44);
+          const stripe=i%2===0?paint.trim:paint.shade;
+          quad(output,raised(heelRing[i],.016),raised(heelRing[j],.016),raised(d,.015),raised(c,.015),stripe,.68);
+        }
+        const tailA=[3.50,3.61,-7.53], tailB=[4.04,3.81,-11.2];
+        const tailC=[4.93+level*.15,5.51+level*.75,-11.43], tailD=[4.68+level*.15,5.89+level*.80,-9.36];
+        const inward=([x,y,z])=>[x-.22,y+.035,z];
+        panel(tailA,tailB,tailC,tailD,paint.plate);
+        panel(inward(tailB),inward(tailA),inward(tailD),inward(tailC),paint.shade);
+        panel(tailD,tailC,inward(tailC),inward(tailD),paint.beam,.95);
+        panel(blend(tailA,tailD,.72),blend(tailB,tailC,.72),tailC,tailD,paint.trim,.92);
+      }
+      if (level===3) {
+        const canardA=[1.55,.77,9.27], canardB=[7.2,.52,7.72], canardC=[5.71,.39,5.55], canardD=[1.64,.72,6.60];
+        const canardMid=[3.26,.86,7.08];
+        plate([canardA,canardB,canardC,canardD],canardMid);
+        band(canardA,canardB,canardMid,.17,.91,.32,paint.beam);
+        band(canardB,canardC,canardMid,.11,.80,.33,paint.trim);
+        const radiatorA=[1.64,1.02,-1.5], radiatorB=[3.70,1.06,-4.15], radiatorC=[3.47,1.52,-8.68], radiatorD=[1.62,1.82,-8.73];
+        const radiatorMid=[2.15,2.12,-5.08];
+        plate([radiatorA,radiatorB,radiatorC,radiatorD],radiatorMid);
+        band(radiatorC,radiatorD,radiatorMid,.07,.94,.31,paint.trim);
+        band(radiatorD,radiatorA,radiatorMid,.08,.73,.27,paint.beam);
+        band(heel,wingRoot,center,.15,.76,.25,paint.trim);
+      }
+    }
+    return output;
+  }
+
   const ordnance=[];
   const missileRear=circle(0,0,-2.38,.24,.24,6), missileFront=circle(0,0,1.12,.24,.24,6);
   skin(ordnance,missileRear,missileFront,['pearl','stone','mist','slate','mist','stone']);
@@ -1723,6 +2091,68 @@ function createAirframe(gl) {
     skin(raider,throat,exhaust,[smoke,mahogany,'edge',mahogany]);
     skin(raider,core,throat,[[1,.53,.24],[.76,.27,.17]]);
     core.forEach((a,i)=>face(raider,a,[x,.0,-12.35],core[(i+1)%core.length],[1,.78,.42],.85));
+  }
+
+  const fighterStyles={
+    interceptor:{scale:[1,1,1],sweep:0,plume:null},
+    gunship:{scale:[1.28,1.13,.89],sweep:.11,tint:[.77,1.14,.82],
+      armor:[.19,.31,.215],shade:[.096,.168,.127],trim:[.80,.96,.41],plume:[1,.55,.20]},
+    recon:{scale:[.73,.71,1.20],sweep:.37,tint:[.71,1.07,1.36],
+      armor:[.23,.43,.59],shade:[.10,.21,.36],trim:[.43,.91,1],plume:[.34,.79,1]}
+  };
+  function fighterStyle(variant) {
+    return variant==="gunship"?fighterStyles.gunship:variant==="recon"?fighterStyles.recon:fighterStyles.interceptor;
+  }
+  function fighterPoint(x,y,z,style) {
+    const [sx,sy,sz]=style.scale;
+    return [sx*x,sy*y,sz*z-Math.abs(x)*style.sweep];
+  }
+  function variantMesh(variant,stride) {
+    if (variant==="interceptor") return raider;
+    const style=fighterStyles[variant], [sx,sy,sz]=style.scale;
+    const result=raider.slice();
+    for (let i=0;i<result.length;i+=stride) {
+      const x=result[i],y=result[i+1],z=result[i+2];
+      const [px,py,pz]=fighterPoint(x,y,z,style);
+      result[i]=px;
+      result[i+1]=py;
+      result[i+2]=pz;
+      const n=[(result[i+3]+Math.sign(x)*style.sweep*result[i+5]/sz)/sx,result[i+4]/sy,result[i+5]/sz];
+      const magnitude=Math.hypot(...n)||1;
+      for (let k=0;k<3;k++) result[i+3+k]=n[k]/magnitude;
+      const r=result[i+6],g=result[i+7],b=result[i+8], glow=result[i+9];
+      // Keep the lit windscreens and nozzles distinct from armor paint.
+      if (z<-11.8&&glow>.65) continue;
+      const pale=r>.81&&g>.66;
+      const value=.09+.59*(r*.27+g*.51+b*.22);
+      for(let k=0;k<3;k++) result[i+6+k]=pale?style.trim[k]:style.tint[k]*value;
+      if (pale) result[i+9]=Math.max(.63,glow);
+    }
+    const {armor,shade,trim}=style;
+    if (variant==="gunship") {
+      for (const side of [-1,1]) {
+        const x=side*5.37;
+        const forward=profile(2.11,1.2,.62,.6,x,-.32);
+        const mid=profile(-1.41,1.28,1.22,.87,x,-.15);
+        const aft=profile(-8.86,.91,.86,.68,x,-.12);
+        const shoulder=profile(-3.70,1.28,1.22,.83,x,-.15);
+        skin(result,aft,shoulder,[shade,armor,shade]);
+        skin(result,shoulder,mid,[trim,armor,shade,armor]);
+        skin(result,mid,forward,[armor,shade,armor]);
+        cap(result,forward,[x,-.24,4.42],[armor,shade]);
+        cap(result,aft,[x,-.23,-9.38],[shade,armor]);
+        const b=side*1.18;
+        face(result,[x-b,1.12,-3.78],[x+b,1.12,-3.78],[x,1.17,-1.53],trim,.71);
+      }
+    } else {
+      const base=[0,.83,-5.8], trailing=[0,.64,-15.4], top=[.08,3.85,-12.23], crown=[.09,4.22,-10.39];
+      const rail=([x,y,z])=>[x-.31,y-.085,z];
+      quad(result,base,trailing,top,crown,armor);
+      quad(result,rail(trailing),rail(base),rail(crown),rail(top),shade);
+      quad(result,crown,top,rail(top),rail(crown),trim,.82);
+      face(result,[0,2.62,-10.76],top,crown,trim,.64);
+    }
+    return result;
   }
 
   const birdKinds={
@@ -1817,10 +2247,12 @@ function createAirframe(gl) {
     gl.bindVertexArray(null);
     return {handle,buffer,count:(data.length||0)/size};
   }
-  const jetMesh=vao(new Float32Array(model),[3,3,3,1],gl.STATIC_DRAW);
+  const playerMeshes=upgradeStyles.map((style,level)=>
+    vao(new Float32Array(style?armorMesh(level,10):model),[3,3,3,1],gl.STATIC_DRAW));
   const missileMesh=vao(new Float32Array(ordnance),[3,3,3,1],gl.STATIC_DRAW);
   const effectMesh=vao(10240,[3,2,3,2],gl.DYNAMIC_DRAW);
-  const raiderMesh=vao(new Float32Array(raider),[3,3,3,1],gl.STATIC_DRAW);
+  const fighterMeshes=Object.fromEntries(Object.keys(fighterStyles).map(variant=>
+    [variant,vao(new Float32Array(variantMesh(variant,10)),[3,3,3,1],gl.STATIC_DRAW)]));
   const birds=Object.fromEntries(Object.entries(birdKinds).map(([species,kind])=>{
     const mesh=makeBird(kind);
     const upload=data=>vao(new Float32Array(data),[3,3,3,1],gl.STATIC_DRAW);
@@ -1888,6 +2320,7 @@ function createAirframe(gl) {
     gl.uniform1f(u.scale,1);
     orientation(u,s.right,s.up,s.forward);
     gl.uniform3fv(u.origin,s.pos);
+    const jetMesh=playerMeshes[grade(s.upgradeLevel)];
     gl.bindVertexArray(jetMesh.handle);
     gl.drawArrays(gl.TRIANGLES,0,jetMesh.count);
     gl.bindVertexArray(missileMesh.handle);
@@ -2019,26 +2452,33 @@ function createAirframe(gl) {
       }
     }
   }
+  const weaponLooks={
+    lance:{flame:[.19,.80,1], core:[.80,1,1], body:[.72,.97,1],
+      smoke:[.32,.56,.67], length:16.4, width:.86},
+    spread:{flame:[1,.34,.63], core:[1,.84,.92], body:[.99,.79,.91],
+      smoke:[.64,.43,.62], length:11.0, width:1.08}
+  };
   function drawTrail(camera,missile) {
-    const t=missile.trail;
+    const t=missile.trail||[], style=weaponLooks[missile.weapon];
     for (let i=Math.max(0,t.length-85);i<t.length;i+=2) {
       const f=(i+1)/t.length, r=1+4*(1-f), n=21+Math.floor(t[i][0]*.1)+i*2;
       const p=[t[i][0]+(random(n)-.5)*r,t[i][1]+(1-f)*12,t[i][2]+(random(n+1)-.5)*r];
-      point(camera,p,r*(.60+random(n+2)),r,f>.82?colors.mist:colors.cloud,.67*f,1);
+      point(camera,p,r*(.60+random(n+2)),r,f>.82?(style?.body??colors.mist):(style?.smoke??colors.cloud),.67*f,1);
     }
   }
   function drawPlumes(camera,s) {
     if (s.external<.04) return;
     const throttle=clamp(s.throttle), flick=Math.sin(s.time*53)*Math.cos(s.time*21);
+    const upgrade=upgradeStyles[grade(s.upgradeLevel)];
     for (const x of [-2.32,2.32]) {
       const base=at(s,[x,.03,-12.50]);
       const length=2.20+15.4*throttle+flick*(.6+throttle);
       const end=at(s,[x+.10*flick,.03+.07*flick,-12.5-length]);
       const alpha=s.external;
-      if (throttle>.1) ribbon(camera,base,end,1.5+throttle*.29,.055,colors.lavender,.88*alpha,.8);
-      ribbon(camera,base,at(s,[x,.04,-12.5-length*.82]),1.03,0,colors.coral,alpha,1.2);
-      ribbon(camera,base,at(s,[x,.04,-12.5-length*.62]),.67,0,colors.yellow,alpha,.9);
-      ribbon(camera,base,at(s,[x,.04,-12.5-length*.42]),.41,0,colors.flash,alpha,.8);
+      if (throttle>.1) ribbon(camera,base,end,1.5+throttle*.29,.055,upgrade?.plasma??colors.lavender,.88*alpha,.8);
+      ribbon(camera,base,at(s,[x,.04,-12.5-length*.82]),1.03,0,upgrade?.plasma??colors.coral,alpha,1.2);
+      ribbon(camera,base,at(s,[x,.04,-12.5-length*.62]),.67,0,upgrade?.trim??colors.yellow,alpha,.9);
+      ribbon(camera,base,at(s,[x,.04,-12.5-length*.42]),.41,0,upgrade?.beam??colors.flash,alpha,.8);
       if (throttle>.66) {
         const diamond=at(s,[x,.04,-12.5-length*.56]);
         point(camera,diamond,.61,1.07,colors.flash,alpha*.9,4);
@@ -2110,12 +2550,13 @@ function createAirframe(gl) {
     }
   }
   function drawProjectile(camera,m) {
+    const style=weaponLooks[m.weapon], length=style?.length??9.6, width=style?.width??1;
     const b=offset(m.pos,m.dir,-2.7), front=offset(m.pos,m.dir,2.4);
-    const jet=offset(m.pos,m.dir,-9.6);
-    ribbon(camera,jet,b,.12,1.65,colors.coral,.95,1.1);
-    ribbon(camera,offset(m.pos,m.dir,-7.4),b,0,.95,colors.flash,1,1);
-    ribbon(camera,b,front,.64,.01,colors.mist,1,1.45);
-    if (m.age<.18) point(camera,b,2.8,2.7,colors.flash,.80,4);
+    const jet=offset(m.pos,m.dir,-length);
+    ribbon(camera,jet,b,.12,1.65*width,style?.flame??colors.coral,.95,1.1);
+    ribbon(camera,offset(m.pos,m.dir,-length*.7708333333),b,0,.95*width,style?.core??colors.flash,1,1);
+    ribbon(camera,b,front,.64,.01,style?.body??colors.mist,1,1.45);
+    if (m.age<.18) point(camera,b,2.8,2.7,style?.core??colors.flash,.80,4);
   }
   function targetScale(camera,e) {
     const depth=dot(sub(e.pos,camera.pos),camera.forward);
@@ -2157,7 +2598,7 @@ function createAirframe(gl) {
       gl.uniform1f(u.scale,scale);
       orientation(u,contact.right,contact.up,contact.forward);
       const bird=contact.kind==='bird' ? birds[contact.species]||birds.falcon : null;
-      const model=bird ? bird.body : raiderMesh;
+      const model=bird ? bird.body : (fighterMeshes[contact.variant]||fighterMeshes.interceptor);
       gl.bindVertexArray(model.handle);
       gl.drawArrays(gl.TRIANGLES,0,model.count);
       if (bird) {
@@ -2182,13 +2623,13 @@ function createAirframe(gl) {
   }
   function drawRaiderPlume(camera,e) {
     const flick=.5+.5*Math.sin(e.age*38+(e.phase||0));
-    const scale=targetScale(camera,e);
+    const scale=targetScale(camera,e), style=fighterStyle(e.variant);
     for (const x of [-2.25,2.25]) {
-      const nozzle=x*scale;
-      const base=at(e,[nozzle,0,-12.1*scale]);
-      const end=at(e,[nozzle,0,(-18.2-flick*2.45)*scale]);
-      ribbon(camera,base,end,.63*scale,.06,colors.scarlet,1,.68);
-      ribbon(camera,base,at(e,[nozzle,0,(-15.4-flick*.9)*scale]),.37*scale,.04,colors.yellow,1,.50);
+      const nozzle=(z)=>at(e,fighterPoint(x,0,z,style).map(value=>value*scale));
+      const base=nozzle(-12.1);
+      const end=nozzle(-18.2-flick*2.45);
+      ribbon(camera,base,end,.63*scale,.06,style.plume??colors.scarlet,1,.68);
+      ribbon(camera,base,nozzle(-15.4-flick*.9),.37*scale,.04,colors.yellow,1,.50);
     }
   }
   function drawBolt(camera,b) {
@@ -2397,7 +2838,8 @@ function createAirframe(gl) {
     point(camera,p,size,size*.88,[.32,.17,.24],.98,1);
     const shimmer=size*(.50+.09*Math.sin(age*36));
     point(camera,offset(p,dir,size*.13),shimmer,shimmer*.83,colors.coral,1,2);
-  }  function draw(camera,s,fx) {
+  }
+  function draw(camera,s,fx) {
     const w=gl.drawingBufferWidth, h=gl.drawingBufferHeight;
     const cam=Object.assign({pixelSize:2*Math.tan(camera.fov*.5)/h},camera);
     gl.disable(gl.BLEND);
@@ -2411,6 +2853,7 @@ function createAirframe(gl) {
     fxCursor=0;
     if (fx.volcano) drawEruption(cam,fx.volcano);
     for (const blob of fx.lava||[]) drawLava(cam,blob);
+    for (const meteor of fx.meteors||[]) drawLava(cam,meteor);
     drawWake(cam,fx.wake);
     drawVapor(cam,fx.vapor);
     for (const missile of fx.missiles) drawTrail(cam,missile);
@@ -2431,7 +2874,7 @@ function createAirframe(gl) {
     }
     gl.bindVertexArray(null);
   }
-  return {draw,railOffsets,wingTipOffsets};
+  return {draw,railOffsets,wingTipOffsets,wingTips};
 }
 
 
@@ -3472,7 +3915,8 @@ function createPatrolSound() {
 
 
 
-function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
+function createPatrolCombat(state, fx, world, sound, surface, difficulty, options={}) {
+  const damagePlayer=options?.damagePlayer;
   const random = (lo, hi) => lo + Math.random() * (hi - lo);
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const add = (a, b, s = 1) => a.map((n, i) => n + b[i]*s);
@@ -3490,39 +3934,87 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     gull:{angle:-.91, distance:520, altitude:-85, speed:81, diveSpeed:126, lead:.38, reach:535, turn:1.52, diveTime:4.05}
   };
 
+  const fighterTypes = {
+    interceptor:{distance:[610,735], bearing:[.23,.37], crossing:[.81,1.1], altitude:[30,84],
+      speed:1, turn:1, standoff:70, rise:8, lead:.34, hold:.97, pause:1, returnSpeed:47},
+    gunship:{distance:[760,960], bearing:[.30,.51], crossing:[.52,.86], altitude:[86,165],
+      speed:.79, turn:.78, standoff:101, rise:52, lead:.26, hold:.84, pause:1.18, returnSpeed:31},
+    recon:{distance:[520,680], bearing:[.61,.90], crossing:[1.16,1.45], altitude:[115,190],
+      speed:1.27, turn:1.34, standoff:152, rise:112, lead:.43, hold:.58, pause:.77, returnSpeed:73}
+  };
+  let fighterBag = [];
+
+  function chooseFighter(forced, opening, index) {
+    if (Object.prototype.hasOwnProperty.call(fighterTypes,forced)) return forced;
+    if (opening && index===0) return "interceptor";
+    if (!fighterBag.length) {
+      fighterBag = Math.random()<.5 ? ["gunship","recon","interceptor"] : ["recon","gunship","interceptor"];
+    }
+    return fighterBag.shift();
+  }
+
+  function fighterAttack(base, variant) {
+    const shape=fighterTypes[variant];
+    const style={...base, turn:(base.turn??.92)*shape.turn};
+    if (variant==="gunship") {
+      style.range*=1.26;
+      style.rounds+=2;
+      style.spacing=Math.max(.137,base.spacing*.73);
+      style.velocity*=.84;
+      style.aim-=.048;
+      style.firstAttack*=1.21;
+      style.warning+=.16;
+      style.spread=base.spread.map(s=>s*.72);
+      style.hitRadius*=1.09;
+    } else if (variant==="recon") {
+      style.range*=.81;
+      style.rounds=1;
+      style.velocity*=1.20;
+      style.aim-=.052;
+      style.firstAttack*=.78;
+      style.warning=Math.max(.21,base.warning*.74);
+      style.spread=base.spread.map(s=>s*.73);
+      style.hitRadius*=.96;
+    }
+    return {...style, attack:base.attack.map(seconds=>seconds*shape.pause)};
+  }
+
   const modes = {
     easy: {
       encounter:{first:[5.3,6.2], flock:[13.8,16.4], repeat:[15.5,21.5], limit:4, pairChance:0},
       shield:{grace:1.55, repair:1.66, step:.86, outage:1.3},
+      damage:{fighter:11,bird:14,lava:13},
       fighter:{range:638, aim:.76, firstAttack:6.0, attack:[8.1,11.6], warning:1.10,
         rounds:1, spacing:.42, velocity:376, spread:[48,31], hitRadius:9.5, turn:.69, speed:[122,147],
         opening:{range:[430,510], bearing:[.056,.13], headingOffset:[.18,.275], altitude:[24,46], speed:[106,119], hold:4.6}},
       bird:{reach:1.03, firstAttack:3.20, entryGap:2.65, waveGap:3.95, warning:.94,
-        attack:[8.4,11.2], duration:.78, speed:.60, turn:.75, hitRadius:18},
+        attack:[8.4,11.2], duration:.78, speed:.60, turn:.75, hitRadius:18, bodyRadius:13},
       missile:{range:2360, assist:.474, acquire:.827, keep:.724, topHeight:.80, seekerRange:2000, seek:.538,
-        fighterRadius:[50,65], birdRadius:[43,57], rangeWeight:.000046},
+        fighterRadius:[50,65], birdRadius:[43,57], lockTime:1, switchMargin:.085, rangeBias:.16},
       lava:{heatHeight:81, heightBase:47, scaledHeight:41, exposure:1.76, rockRadius:.72, rockMargin:5}
     },
     normal: {
       encounter:{first:[4.6,5.7], flock:[11.0,14.5], repeat:[13.2,17.9], limit:5, pairChance:.30},
       shield:{grace:1.55, repair:4.1, step:1.65, outage:2.8},
+      damage:{fighter:17,bird:24,lava:20},
       fighter:{range:744, aim:.69, firstAttack:2.0, attack:[5.05,7.25], warning:.42,
         rounds:2, spacing:.235, velocity:590, spread:[22,16], hitRadius:12.4},
       bird:{reach:1.03, firstAttack:.95, entryGap:1.30, waveGap:1.55, warning:.33,
-        attack:[4.9,7.25], duration:.87, speed:.91, turn:.96, hitRadius:25},
-      missile:{range:2100, assist:.791, acquire:.927, keep:.884, topHeight:.60, seekerRange:1320, seek:.892,
-        fighterRadius:[33,45], birdRadius:[28,38]},
+        attack:[4.9,7.25], duration:.87, speed:.91, turn:.96, hitRadius:25, bodyRadius:17},
+      missile:{range:2180, assist:.757, acquire:.913, keep:.869, topHeight:.64, seekerRange:1460, seek:.865,
+        fighterRadius:[35,46], birdRadius:[30,40], lockTime:1.20, switchMargin:.073, rangeBias:.13},
       lava:{heatHeight:138, heightBase:81, scaledHeight:58, exposure:1.02, rockRadius:1, rockMargin:8}
     },
     ace: {
       encounter:{first:[3.0,3.9], flock:[8.7,11.7], repeat:[9.8,14.2], limit:6, pairChance:.52},
       shield:{grace:1.12, repair:5.8, step:2.10, outage:3.6},
+      damage:{fighter:23,bird:31,lava:28},
       fighter:{range:855, aim:.63, firstAttack:.77, attack:[3.73,5.25], warning:.24,
         rounds:3, spacing:.145, velocity:706, spread:[11,8], hitRadius:13.8},
       bird:{reach:1.09, firstAttack:.30, entryGap:.47, waveGap:.65, warning:.23,
-        attack:[3.8,5.6], duration:1.04, speed:1.04, turn:1.03, hitRadius:27},
-      missile:{range:1900, assist:.846, acquire:.955, keep:.915, topHeight:.55, seekerRange:1140, seek:.929,
-        fighterRadius:[29,40], birdRadius:[25,33]},
+        attack:[3.8,5.6], duration:1.04, speed:1.04, turn:1.03, hitRadius:27, bodyRadius:18},
+      missile:{range:1940, assist:.835, acquire:.950, keep:.904, topHeight:.56, seekerRange:1200, seek:.915,
+        fighterRadius:[29,40], birdRadius:[26,34], lockTime:1.45, switchMargin:.062, rangeBias:.11},
       lava:{heatHeight:164, heightBase:97, scaledHeight:69, exposure:.63, rockRadius:1, rockMargin:10}
     }
   };
@@ -3549,11 +4041,12 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
   Object.assign(fx,{enemies:[],bolts:[],airBursts:[],lava:[],volcano:null});
   Object.assign(state,{difficulty:modeId,score:0,shield:3,contacts:0,disabledUntil:0,hitAt:-10,combatWarning:"",combatActive:false,airHitAt:-10,airHitPoint:null});
   let nextEncounter = Infinity, encounter = 0, previousKind = "", kindStreak = 0, nextDive = 0;
-  let target = null, assisted = null, acquiredAt = -1, locked = false, nextId = 0;
+  let target=null, acquiredAt=null, locked=false, nextId=0;
   const LOCK_DELAY=.13;
   let hitCount = 0, boltHits = 0, birdHits = 0, lavaHits = 0, destroyed = 0;
   let nextRepair = Infinity, nextEruption = 0, nextRumble = 0, exposure = 0;
   let alert = {label:"", until:0, priority:0};
+  let damage=null, playerEnd=[...state.pos], playerStart=playerEnd;
 
   function setDifficulty(profile) {
     modeId=difficultyId(profile);
@@ -3565,13 +4058,15 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     nextEncounter=Infinity;
     nextDive=state.time;
     encounter=0;
+    fighterBag=[];
     previousKind="";
     kindStreak=0;
-    target=assisted=null;
-    acquiredAt=-1;
+    target=null;
+    acquiredAt=null;
     locked=false;
     nextRepair=Infinity;
     exposure=0;
+    playerStart=playerEnd=[...state.pos];
     alert={label:"",until:0,priority:0};
     Object.assign(state,{difficulty:modeId,shield:3,contacts:0,disabledUntil:0,hitAt:-10,combatWarning:"",
       combatActive:false,airHitAt:-10,airHitPoint:null});
@@ -3584,7 +4079,7 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
   }
 
   function hit(label, cause) {
-    if (modeId==="free" || state.time-state.hitAt < mode.shield.grace) return false;
+    if (modeId==="free" || state.time-state.hitAt < mode.shield.grace || options?.canHitPlayer?.()===false) return false;
     state.hitAt = state.time;
     state.shield = Math.max(0,state.shield-1);
     hitCount++;
@@ -3598,6 +4093,7 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     nextRepair = state.time+mode.shield.repair;
     announce(label,2.1,5);
     sound.play("hit",.85);
+    damage={amount:mode.damage[cause],source:cause};
     return true;
   }
 
@@ -3607,27 +4103,30 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     const count=amount ?? (isBird?3:1);
     const wing=Math.random()<.5?-1:1;
     const opening=!isBird&&firstWave?mode.fighter.opening:null;
-    const distance=random(...(opening?.range||[610,735]));
     const heading=state.heading;
-    const course=opening?heading-wing*random(...opening.headingOffset):heading+Math.PI+wing*random(.81,1.1);
     const created=[];
     for(let i=0;i<count;i++) {
       const species=isBird?(singleSpecies||Object.keys(birdTypes)[i%3]):null;
       const type=birdTypes[species];
-      const bearing=heading+(isBird?wing*type.angle+random(-.10,.10):wing*random(...(opening?.bearing||[.23,.37])));
-      const range=isBird?type.distance+random(-55,55):distance+112*i;
+      const variant=isBird?null:chooseFighter(singleSpecies,firstWave,i);
+      const fighter=isBird?null:fighterTypes[variant];
+      const attackRules=isBird?null:fighterAttack(mode.fighter,variant);
+      const practice=variant==="interceptor"&&i===0?opening:null;
+      const bearing=heading+(isBird?wing*type.angle+random(-.10,.10):wing*random(...(practice?.bearing||fighter.bearing)));
+      const range=isBird?type.distance+random(-55,55):random(...(practice?.range||fighter.distance))+112*i;
       const x=state.pos[0]+Math.sin(bearing)*range;
       const z=state.pos[2]+Math.cos(bearing)*range;
-      const y=Math.max(surface(x,z)+(isBird?52:85),state.pos[1]+(isBird?type.altitude:random(...(opening?.altitude||[30,84]))));
+      const y=Math.max(surface(x,z)+(isBird?52:85),state.pos[1]+(isBird?type.altitude:random(...(practice?.altitude||fighter.altitude))));
       const side=wing*(i%2===0?1:-1);
-      const speed=isBird?type.speed*random(.94,1.06):random(...(opening?.speed||mode.fighter.speed||[151,177]));
+      const speed=isBird?type.speed*random(.94,1.06):random(...(practice?.speed||mode.fighter.speed||[151,177]))*fighter.speed;
+      const course=isBird?0:practice?heading-wing*random(...practice.headingOffset):heading+Math.PI+wing*random(...fighter.crossing);
       const enemy={
-        id:++nextId,kind,species,pos:[x,y,z],alive:true,age:0,phase:random(0,6.28),
-        attack:0,diveAt:0,nextAttack:state.time+(isBird?mode.bird.firstAttack+i*mode.bird.entryGap:mode.fighter.firstAttack),burstLeft:0,burstAt:0,
-        entryUntil:state.time+(isBird?0:(opening?.hold||.97)),breakUntil:0,wing:side,bank:0,speed,travelSpeed:speed
+        id:++nextId,kind,species,variant,attackRules,pos:[x,y,z],alive:true,age:0,phase:random(0,6.28),
+        attack:0,diveAt:0,nextAttack:state.time+(isBird?mode.bird.firstAttack+i*mode.bird.entryGap:attackRules.firstAttack),burstLeft:0,burstAt:0,
+        entryUntil:state.time+(isBird?0:(practice?.hold||fighter.hold)),breakUntil:0,wing:side,bank:0,speed,travelSpeed:speed
       };
       const intercept=add(state.pos,state.forward,state.speed*(isBird?type.lead:.30));
-      enemy.forward=isBird?unit(delta(intercept,enemy.pos)):[Math.sin(course),opening?-.007:-.038,Math.cos(course)];
+      enemy.forward=isBird?unit(delta(intercept,enemy.pos)):[Math.sin(course),practice?-.007:-.038,Math.cos(course)];
       enemy.forward=unit(enemy.forward);
       enemy.entryCourse=[...enemy.forward];
       axes(enemy,0);
@@ -3659,22 +4158,36 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     nextEncounter=state.time+random(...(encounter===1?pacing.flock:pacing.repeat));
   }
 
-  function distanceToSegment(point, from, to) {
-    const vector=delta(to,from);
-    const t=clamp(dot(delta(point,from), vector)/Math.max(1,dot(vector,vector)),0,1);
-    return magnitude(delta(point,add(from,vector,t)));
+  function sweptContact(from,to,targetFrom,targetTo,radius) {
+    const start=delta(from,targetFrom);
+    const c=dot(start,start)-radius*radius;
+    if (c<=0) return 0;
+    const motion=delta(delta(to,targetTo),start);
+    const a=dot(motion,motion), b=dot(start,motion);
+    if (a<1e-9 || b>=0) return Infinity;
+    const discriminant=b*b-a*c;
+    if (discriminant<0) return Infinity;
+    const t=c/(-b+Math.sqrt(discriminant));
+    return t<=1?t:Infinity;
+  }
+  function crossing(from,to,t) {
+    return add(from,delta(to,from),t);
   }
 
   function fireBolt(enemy) {
-    const {velocity,spread}=mode.fighter;
+    const {velocity,spread,hitRadius,rounds}=enemy.attackRules;
     const range=magnitude(delta(state.pos,enemy.pos));
     const lead=clamp(range/(velocity+state.speed*.7),.035,1.1);
+    const barrage=enemy.variant==="gunship";
+    const index=rounds-enemy.burstLeft;
+    const sweep=barrage?(index/(rounds-1)-.5)*2*enemy.wing*Math.min(55,range*.070):0;
     let aim=add(state.pos,state.forward,state.speed*lead);
-    aim=add(aim,state.right,random(-spread[0],spread[0]));
-    aim[1]+=random(-spread[1],spread[1]);
-    const pos=add(enemy.pos,enemy.forward,14);
+    aim=add(aim,state.right,sweep+random(-spread[0],spread[0]));
+    aim[1]+=random(-spread[1],spread[1])+(barrage?10*(1-2*index/(rounds-1)):0);
+    let pos=add(enemy.pos,enemy.forward,barrage?12:14);
+    if (barrage) pos=add(pos,enemy.right,index%2===0?-11:11);
     const dir=unit(delta(aim,pos));
-    fx.bolts.push({pos,dir,age:0,velocity});
+    fx.bolts.push({pos,dir,age:0,velocity,hitRadius,variant:enemy.variant});
     sound.play("hostile",clamp(270/Math.max(120,range),.2,.75),
       clamp(dot(unit(delta(enemy.pos,state.pos)),state.right),-1,1)*.55);
   }
@@ -3715,7 +4228,7 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     }
     const towardPlayer=dot(enemy.forward,unit(relative));
     const evading=state.time<enemy.breakUntil;
-    const fighterRules=mode.fighter, birdRules=mode.bird;
+    const fighterRules=enemy.attackRules, fighter=fighterTypes[enemy.variant], birdRules=mode.bird;
     if (bird && enemy.diveAt>0 && state.time>=enemy.diveAt) {
       enemy.diveAt=0;
       enemy.attack=1;
@@ -3741,6 +4254,7 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
         fireBolt(enemy);
         enemy.burstLeft--;
         enemy.burstAt=state.time+fighterRules.spacing;
+        if (enemy.variant==="recon" && !enemy.burstLeft) breakAway(enemy,.83);
       } else enemy.burstLeft=0;
     }
     if (bird && enemy.attack && state.time>enemy.diveUntil) breakAway(enemy,1.6);
@@ -3750,11 +4264,12 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     } else if(!bird&&state.time<enemy.entryUntil) {
       desired=enemy.entryCourse;
     } else {
-      const lead=bird?(enemy.attack?diveLead(relative,enemy.speed+type.diveSpeed*birdRules.speed,type.diveTime*birdRules.duration*.86):.48):.34;
+      const lead=bird?(enemy.attack?diveLead(relative,enemy.speed+type.diveSpeed*birdRules.speed,type.diveTime*birdRules.duration*.86):.48):fighter.lead;
       let aim=add(state.pos,state.forward,state.speed*lead);
       if(!enemy.attack) {
-        aim=add(aim,state.right,enemy.wing*(bird?19:70));
-        aim[1]+=bird?33:8;
+        const strafe=enemy.variant==="recon"?fighter.standoff*Math.min(1,range/380):fighter?.standoff;
+        aim=add(aim,state.right,enemy.wing*(bird?19:strafe));
+        aim[1]+=bird?33:fighter.rise;
       }
       desired=unit(delta(aim,enemy.pos));
     }
@@ -3769,16 +4284,25 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     enemy.forward=turnToward(enemy,desired,bird?(enemy.attack?type.turn*birdRules.turn:1.29):(fighterRules.turn??.92),dt);
     axes(enemy,enemy.bank);
 
-    const goal=enemy.speed+(bird&&enemy.attack?type.diveSpeed*birdRules.speed:(!bird&&state.time<enemy.breakUntil?47:0));
+    const goal=enemy.speed+(bird&&enemy.attack?type.diveSpeed*birdRules.speed:(!bird&&state.time<enemy.breakUntil?fighter.returnSpeed:0));
     enemy.travelSpeed+=(goal-enemy.travelSpeed)*(1-Math.exp(-2.1*dt));
     const next=add(enemy.pos,enemy.forward,enemy.travelSpeed*dt);
     next[1]=Math.max(next[1],surface(next[0],next[2])+(bird?27:42));
-    if(bird&&enemy.attack&&distanceToSegment(state.pos,enemy.pos,next)<birdRules.hitRadius) {
-      hit(enemy.species.toUpperCase()+" HIT","bird");
-      breakAway(enemy,2.35);
-    } else if(!enemy.attack&&!enemy.diveAt&&range<(bird?116:168)&&towardPlayer<-.19&&state.time>=enemy.breakUntil) {
+    if (bird) {
+      const radius=enemy.attack?birdRules.hitRadius:birdRules.bodyRadius;
+      const contact=sweptContact(enemy.pos,next,playerStart,playerEnd,radius);
+      if (Number.isFinite(contact)) {
+        hit(enemy.species.toUpperCase()+" HIT","bird");
+        fx.airBursts.push({pos:crossing(enemy.pos,next,contact),time:0,kind:"bird",
+          species:enemy.species,forward:enemy.forward});
+        enemy.alive=false;
+        return;
+      }
+    }
+    if (!enemy.attack&&!enemy.diveAt&&range<(bird?116:168)&&towardPlayer<-.19&&state.time>=enemy.breakUntil) {
       breakAway(enemy,random(1.5,2.45));
     }
+    enemy.previousPos=enemy.pos;
     enemy.pos=next;
   }
 
@@ -3787,7 +4311,9 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
       const bolt=fx.bolts[i];
       const next=add(bolt.pos,bolt.dir,bolt.velocity*dt);
       bolt.age+=dt;
-      if (distanceToSegment(state.pos,bolt.pos,next)<mode.fighter.hitRadius) {
+      const contact=sweptContact(bolt.pos,next,playerStart,playerEnd,bolt.hitRadius??mode.fighter.hitRadius);
+      const impact=Number.isFinite(contact)?crossing(bolt.pos,next,contact):null;
+      if (impact && impact[1]>surface(impact[0],impact[2])) {
         hit("FIGHTER HIT","fighter");
         fx.bolts.splice(i,1);
       } else if (bolt.age>2.5 || next[1]<surface(next[0],next[2])) {
@@ -3796,46 +4322,74 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     }
   }
 
-  function contactAngle(enemy) {
-    const vector=delta(enemy.pos,state.pos);
-    const distance=magnitude(vector);
-    const direction=unit(vector);
-    const top=state.view===0;
-    const alignment=top
-      ? dot(unit([direction[0],0,direction[2]]),unit([state.forward[0],0,state.forward[2]]))
-      : dot(state.forward,direction);
-    return {distance,alignment,vertical:Math.abs(direction[1]),top};
+  function terrainInSight(from,to,distance) {
+    const steps=clamp(Math.ceil(distance/95),2,25);
+    const [dx,dy,dz]=delta(to,from);
+    for (let i=1;i<steps;i++) {
+      const t=i/steps;
+      const x=from[0]+dx*t, z=from[2]+dz*t;
+      if (from[1]+dy*t<=surface(x,z)+2) return false;
+    }
+    return true;
   }
-
+  function aimScore(alignment,distance,range,bias) {
+    return -Math.acos(clamp(alignment,-1,1))-bias*distance/range;
+  }
+  function betterContact(candidate,current) {
+    return !current || candidate.score>current.score ||
+      (candidate.score===current.score&&candidate.enemy.id<current.enemy.id);
+  }
   function updateLock() {
-    let best=null, keepLock=false, quality=-Infinity, assistQuality=-Infinity;
-    assisted=null;
     const rules=mode.missile;
-    if(state.time>=state.disabledUntil) {
-      for(const enemy of fx.enemies) {
-        if(!enemy.alive) continue;
-        const {distance,alignment,vertical,top}=contactAngle(enemy);
-        if(distance<24||distance>rules.range||(top&&vertical>rules.topHeight)) continue;
-        const value=alignment-distance*(rules.rangeWeight??.000020);
-        if(alignment>=rules.assist+(top?.014:0)&&value>assistQuality) {
-          assistQuality=value;
-          assisted=enemy;
-        }
-        if(enemy===target&&locked&&alignment>=rules.keep-(top?.012:0)) keepLock=true;
-        if(alignment<rules.acquire-(top?.012:0)||(top&&vertical>rules.topHeight-.11)) continue;
-        if(value>quality) {
-          quality=value;
-          best=enemy;
-        }
+    const top=state.view===0;
+    const axis=top?unit([state.forward[0],0,state.forward[2]]):state.forward;
+    const assistCone=rules.assist+(top?.014:0);
+    const lockCone=rules.acquire-(top?.012:0);
+    const retainCone=rules.keep-(top?.012:0);
+    let best=null, current=null;
+    if (state.time>=state.disabledUntil) {
+      for (const enemy of fx.enemies) {
+        if (!enemy.alive) continue;
+        const relative=delta(enemy.pos,state.pos), distance=magnitude(relative);
+        const vertical=Math.abs(relative[1])/Math.max(1,distance);
+        if (distance<24||distance>rules.range||(top&&vertical>rules.topHeight)) continue;
+        const direction=unit(top?[relative[0],0,relative[2]]:relative);
+        const alignment=dot(axis,direction);
+        const same=enemy===target;
+        if (alignment<assistCone-(same?.035:0)||!terrainInSight(state.pos,enemy.pos,distance)) continue;
+        const belowTopLimit=!top||vertical<=rules.topHeight-.11;
+        const candidate={
+          enemy,score:aimScore(alignment,distance,rules.range,rules.rangeBias),
+          canAcquire:belowTopLimit&&alignment>=lockCone,
+          canContinue:belowTopLimit&&alignment>=lockCone-.021,
+          canKeep:alignment>=retainCone
+        };
+        if (same) current=candidate;
+        if (alignment>=assistCone&&betterContact(candidate,best)) best=candidate;
       }
     }
-    if(keepLock) return;
-    if(best!==target) {
-      target=best;
-      locked=false;
-      acquiredAt=state.time;
+    let chosen=best;
+    if (current) {
+      const keepingLock=locked&&current.canKeep;
+      const margin=rules.switchMargin*(keepingLock?1.9:1);
+      if (!best||best.enemy===target||best.score<current.score+margin||(keepingLock&&!best.canAcquire)) {
+        chosen=current;
+      }
     }
-    if(target&&!locked&&state.time-acquiredAt>=LOCK_DELAY) {
+    const selected=chosen?.enemy??null;
+    if (target!==selected) {
+      target=selected;
+      acquiredAt=null;
+      locked=false;
+    }
+    if (!chosen || (locked&&chosen.canKeep)) return;
+    locked=false;
+    if (!chosen.canAcquire&&(acquiredAt===null||!chosen.canContinue)) {
+      acquiredAt=null;
+      return;
+    }
+    acquiredAt ??= state.time;
+    if (state.time-acquiredAt>=LOCK_DELAY*rules.lockTime) {
       locked=true;
       sound.play("lock",.58);
     }
@@ -3844,20 +4398,18 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
   function seekAirTarget(pos,dir) {
     if (modeId==="free") return null;
     const rules=mode.missile;
-    let target=null, quality=-Infinity;
-    for(const enemy of fx.enemies) {
-      if(!enemy.alive) continue;
+    let best=null;
+    for (const enemy of fx.enemies) {
+      if (!enemy.alive) continue;
       const relative=delta(enemy.pos,pos);
       const distance=magnitude(relative);
-      if(distance<18||distance>rules.seekerRange) continue;
+      if (distance<18||distance>rules.seekerRange) continue;
       const facing=dot(relative,dir)/distance;
-      const value=facing-distance*.000035;
-      if(facing>=rules.seek&&value>quality) {
-        quality=value;
-        target=enemy;
-      }
+      if (facing<rules.seek||!terrainInSight(pos,enemy.pos,distance)) continue;
+      const candidate={enemy,score:aimScore(facing,distance,rules.seekerRange,rules.rangeBias)};
+      if (betterContact(candidate,best)) best=candidate;
     }
-    return target;
+    return best?.enemy??null;
   }
 
   function vent(dt, active) {
@@ -3901,9 +4453,11 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
       rock.age+=dt;
       rock.velocity[1]-=81*dt;
       rock.dir=unit(rock.velocity);
-      if (threats && distanceToSegment(state.pos,rock.pos,next)<rock.size*hazards.rockRadius+hazards.rockMargin) {
+      const contact=threats?sweptContact(rock.pos,next,playerStart,playerEnd,rock.size*hazards.rockRadius+hazards.rockMargin):Infinity;
+      const impact=Number.isFinite(contact)?crossing(rock.pos,next,contact):null;
+      if (impact && impact[1]>surface(impact[0],impact[2])) {
         hit("LAVA STRIKE","lava");
-        fx.airBursts.push({pos:[...rock.pos],time:0,kind:"lava"});
+        fx.airBursts.push({pos:impact,time:0,kind:"lava"});
         fx.lava.splice(i,1);
       } else if (rock.age>7 || (rock.age>.18 && next[1]<surface(next[0],next[2]))) {
         fx.lava.splice(i,1);
@@ -3912,6 +4466,11 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
   }
 
   function update(dt, active) {
+    damage=null;
+    const prior=playerEnd;
+    playerEnd=[...state.pos];
+    // Ignore discontinuities from a reset or repositioning.
+    playerStart=magnitude(delta(playerEnd,prior))<=Math.max(32,state.speed*dt*2+8)?prior:playerEnd;
     vent(dt,active);
     if (!active || modeId==="free") return;
     encounterTick();
@@ -3930,34 +4489,43 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
     state.contacts=fx.enemies.length;
     state.combatActive=state.time-state.hitAt<3 || fx.enemies.some(enemy=>magnitude(delta(enemy.pos,state.pos))<1750);
     state.combatWarning=state.time<alert.until?alert.label:"";
+    if (damage && typeof damagePlayer==="function") damagePlayer(damage.amount,damage.source);
   }
 
   function intercept(from,to,guided) {
     if (modeId==="free") return false;
     const rules=mode.missile;
-    let struck=null, nearest=Infinity;
+    let struck=null, first=Infinity;
     for (const enemy of fx.enemies) {
       if (!enemy.alive) continue;
       const radii=enemy.kind==="bird"?rules.birdRadius:rules.fighterRadius;
       const radius=radii[guided===enemy?1:0];
-      if (distanceToSegment(enemy.pos,from,to)<radius) {
-        const range=magnitude(delta(enemy.pos,from));
-        if (range<nearest) {
-          nearest=range;
-          struck=enemy;
-        }
+      const time=sweptContact(from,to,enemy.previousPos||enemy.pos,enemy.pos,radius);
+      if (!Number.isFinite(time)) continue;
+      const point=crossing(from,to,time);
+      if (point[1]<=surface(point[0],point[2])) continue;
+      if (!struck || time<first || (time===first && enemy.id<struck.id)) {
+        first=time;
+        struck=enemy;
       }
     }
     if (!struck) return false;
+    const hitPoint=crossing(struck.previousPos||struck.pos,struck.pos,first);
     struck.alive=false;
+    if (target===struck) {
+      target=null;
+      acquiredAt=null;
+      locked=false;
+    }
     fx.enemies.splice(fx.enemies.indexOf(struck),1);
     const bird=struck.kind==="bird";
-    fx.airBursts.push({pos:[...struck.pos],time:0,kind:struck.kind,species:struck.species,forward:struck.forward});
-    state.airHitPoint=[...struck.pos];
+    fx.airBursts.push({pos:hitPoint,time:0,kind:struck.kind,species:struck.species,forward:struck.forward});
+    state.airHitPoint=hitPoint;
     state.airHitAt=state.time;
     state.score+=bird?50:100;
     destroyed++;
     state.contacts=fx.enemies.length;
+    options?.onDefeat?.(struck);
     if(!state.contacts&&alert.priority===2) {
       if(state.combatWarning===alert.label) state.combatWarning="";
       alert={label:"",until:0,priority:0};
@@ -4004,24 +4572,24 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
       if (range>2700) continue;
       const [x,y,z]=project(enemy.pos);
       const selected=enemy===target;
-      const ready=enemy===assisted;
+      const ready=selected&&!locked;
       const color=selected&&locked ? "#c6ffd2" : ready ? "#ffd388" : enemy.kind==="fighter" ? "#ff8c77" :
         enemy.species==="raven"?"#e6baff":enemy.species==="gull"?"#d8f8ff":"#fff0a7";
       const bottom=height*(state.interior>.5?.62:.96);
       if (z>2&&x>margin&&x<width-margin&&y>margin&&y<bottom) {
         const radius=clamp(Math.round(focal*(enemy.kind==="fighter"?22:17)/z+3),selected||ready?8:6,22);
         box(x,y,radius,color,selected&&locked);
-        if (selected) {
+        if (selected&&acquiredAt!==null) {
           const barWidth=radius*2+1;
-          const fraction=clamp((state.time-acquiredAt)/LOCK_DELAY,0,1);
+          const fraction=clamp((state.time-acquiredAt)/(LOCK_DELAY*mode.missile.lockTime),0,1);
           bar(x-radius,y+radius+4,barWidth,2,shade);
           bar(x-radius,y+radius+4,Math.round(barWidth*fraction),1,color);
         }
-      } else if (!offscreen||range<offscreen.range) {
+      } else if (!offscreen||(selected&&!offscreen.selected)||(selected===offscreen.selected&&range<offscreen.range)) {
         const direction=delta(enemy.pos,camera.pos);
         const a=dot(direction,camera.right);
         const b=z<2&&Math.abs(a)<range*.16?range*.6:-dot(direction,camera.up);
-        offscreen={a,b,range,color,bottom};
+        offscreen={a,b,range,color,bottom,selected};
       }
     }
     if (offscreen) {
@@ -4060,9 +4628,9 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
 
   return {
     update, draw, intercept, spawn, setDifficulty,
-    targetForLaunch:()=>locked&&target?.alive?target:assisted?.alive?assisted:null,
+    targetForLaunch:()=>target?.alive?target:null,
     seekAirTarget,
-    inRange:()=>assisted?.alive?(assisted.kind==="fighter"?"FIGHTER IN RANGE":assisted.species.toUpperCase()+" IN RANGE"):"",
+    inRange:()=>target?.alive?(target.kind==="fighter"?"FIGHTER IN RANGE":target.species.toUpperCase()+" IN RANGE"):"",
     lock: () => (locked&&target?.alive) ? (target.kind==="bird"?target.species.toUpperCase()+" LOCK":"FIGHTER LOCK") : "",
     stats: () => ({difficulty:modeId,hitCount,boltHits,birdHits,lavaHits,destroyed,score:state.score,shield:state.shield,
       contacts:fx.enemies.length,bolts:fx.bolts.length,airBursts:fx.airBursts.length,lava:fx.lava.length})
@@ -4070,6 +4638,1333 @@ function createPatrolCombat(state, fx, world, sound, surface, difficulty) {
 }
 
 
+
+
+function createPatrolHazards(state, fx, world, sound, applyDamage) {
+  const meteors = fx.meteors = [];
+  const weather = state.weather = [];
+  const rules = {
+    tornado: {biome: "desert", radius: [190, 295], height: [530, 790], lifetime: [16, 24],
+      alert: "TORNADO AHEAD", strike: "TORNADO STRIKE", damage:[14,20,26], wait: [8, 16]},
+    blizzard: {biome: "snow", radius: [380, 570], height: [350, 620], lifetime: [15, 22],
+      alert: "BLIZZARD AHEAD", strike: "BLIZZARD STRIKE", damage:[11,17,23], wait: [8, 16]}
+  };
+  const random = (a, b) => a + (b - a) * Math.random();
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const smooth = n => {
+    n = clamp(n, 0, 1);
+    return n*n*(3-2*n);
+  };
+  const add = (a, b, s = 1) => a.map((x, i) => x + b[i]*s);
+  const sub = (a, b) => add(a, b, -1);
+  const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+  const unit = a => {
+    const length = Math.hypot(...a) || 1;
+    return a.map(n => n/length);
+  };
+  const floor = (x, z) => Math.max(world.waterLevel, world.height(x, z));
+  const counts = {meteors:0, tornadoes:0, blizzards:0, meteorHits:0, tornadoHits:0, blizzardHits:0};
+  let meteorDue = Infinity, previous = null;
+  const weatherDue = {tornado: Infinity, blizzard: Infinity};
+  let meteorAlertAt = -Infinity, lastDifficulty;
+
+  function reset() {
+    meteors.length = 0;
+    weather.length = 0;
+    state.hazardWarning = "";
+    weatherDue.tornado = weatherDue.blizzard = meteorDue = Infinity;
+    meteorAlertAt = -Infinity;
+    previous = null;
+    lastDifficulty = undefined;
+  }
+
+  function impact(from, to) {
+    for (let i = 0; i < 7; i++) {
+      const mid = from.map((n, j) => (n + to[j])*.5);
+      if (mid[1] > floor(mid[0], mid[2])) from = mid;
+      else to = mid;
+    }
+    const x = to[0], z = to[2], bed = world.height(x, z);
+    const water = bed < world.waterLevel;
+    const point = [x, Math.max(world.waterLevel, bed), z];
+    fx.impacts.push({pos:point, time:0, water, source:"meteor"});
+    if (fx.impacts.length > 18) fx.impacts.shift();
+    const offset = sub(point,state.pos);
+    const range = Math.hypot(...offset);
+    if (range < 2900) sound.play(water ? "water" : "land", clamp(610/range,.14,.9),dot(unit(offset),state.right)*.68);
+  }
+
+  function meteor() {
+    const {pos, heading, speed, pitch = 0} = state;
+    const downrange = [Math.sin(heading), 0, Math.cos(heading)];
+    const across = [downrange[2], 0, -downrange[0]];
+    const interceptAt = random(2.45, 3.2);
+    const momentum = Math.max(250, 725-speed) * random(.93, 1.08);
+    const sideSpeed = random(-118, 118);
+    const fallSpeed = random(226, 278);
+    const gravity = random(28, 41);
+    const crossesPath = Math.random() < .55;
+    const sideMiss = crossesPath ? random(-26,26) : random(90,252) * (sideSpeed < 0 ? -1 : 1);
+    const target = add(add(pos,downrange,speed*Math.cos(pitch)*interceptAt),across,sideMiss);
+    target[1] += speed*Math.sin(pitch)*interceptAt;
+    target[1] = Math.max(target[1],floor(target[0],target[2])+26);
+    const vel = add(add([0,-fallSpeed,0],downrange,-momentum),across,sideSpeed);
+    const start = add(target,vel,-interceptAt);
+    start[1] += .5*gravity*interceptAt*interceptAt;
+    const size = random(16, 24);
+    meteors.push({pos:start,vel,dir:unit(vel),age:0,size,gravity});
+    counts.meteors++;
+    meteorAlertAt = state.time + interceptAt + .38;
+    sound.play("inbound", .52, clamp(sideMiss/340,-.48,.48));
+  }
+
+  function nearestTile(zone) {
+    return [
+      zone.x + Math.round((state.pos[0]-zone.x)/world.size)*world.size,
+      zone.z + Math.round((state.pos[2]-zone.z)/world.size)*world.size
+    ];
+  }
+
+  function storm(kind, center) {
+    const rule = rules[kind];
+    const zone = world.biomes?.[rule.biome];
+    if (!zone) return false;
+    const [centerX,centerZ] = center || nearestTile(zone);
+    const heading = state.heading;
+    const dir = [Math.sin(heading), Math.cos(heading)];
+    let chosen = null;
+    let preference = -Infinity;
+    for (let i = 0; i < 14; i++) {
+      const distance = random(420,1450);
+      const jitter = random(-620,620);
+      const playerForward = i < 8 || center;
+      const x = center ? centerX : playerForward ? state.pos[0] + dir[0]*distance + dir[1]*jitter : centerX + random(-.63,.63)*zone.spanX;
+      const z = center ? centerZ : playerForward ? state.pos[2] + dir[1]*distance - dir[0]*jitter : centerZ + random(-.63,.63)*zone.spanZ;
+      if (world.biome(x,z) !== rule.biome) continue;
+      const y = floor(x,z);
+      const dx = x-state.pos[0], dz = z-state.pos[2];
+      const range = Math.hypot(dx,dz);
+      const toward = (dx*dir[0] + dz*dir[1])/Math.max(40,range);
+      const quality = random(0,.78) + toward*.83 - range*.00026 - Math.abs(y-state.pos[1])*.00038;
+      if (quality > preference) {
+        preference = quality;
+        chosen = [x,y-16,z];
+      }
+      if (center) break;
+    }
+    if (!chosen) return false;
+    const angle = random(0,Math.PI*2);
+    const speed = kind === "tornado" ? random(23,43) : random(17,31);
+    weather.push({
+      kind,pos:chosen,radius:random(...rule.radius),height:random(...rule.height),
+      lifetime:random(...rule.lifetime),age:0,strength:0,
+      drift:[Math.sin(angle)*speed,0,Math.cos(angle)*speed],exposure:0,nextHit:0
+    });
+    if (kind === "tornado") counts.tornadoes++;
+    else counts.blizzards++;
+    return true;
+  }
+
+  function stepMeteors(dt, oldPlayer) {
+    for (let i = meteors.length-1; i >= 0; i--) {
+      const rock = meteors[i];
+      const from = rock.pos;
+      const next = add(from,rock.vel,dt);
+      next[1] -= .5*rock.gravity*dt*dt;
+      rock.vel[1] -= rock.gravity*dt;
+      rock.age += dt;
+      rock.dir = unit(rock.vel);
+      const relativeFrom = sub(from,oldPlayer), relativeTo = sub(next,state.pos);
+      const relativeStep = sub(relativeTo,relativeFrom);
+      const closest = clamp(-dot(relativeFrom,relativeStep)/Math.max(.001,dot(relativeStep,relativeStep)),0,1);
+      const approach = add(relativeFrom,relativeStep,closest);
+      const contact = from.map((n, j) => n + (next[j]-n)*closest);
+      const hit = rock.age > .24 && Math.hypot(...approach) < rock.size+11 &&
+        contact[1] > floor(contact[0],contact[2])+3;
+      if (hit) {
+        if (applyDamage(38,"meteor","METEOR STRIKE")) counts.meteorHits++;
+        fx.airBursts.push({pos:contact,time:0,kind:"lava",source:"meteor"});
+        meteors.splice(i,1);
+      } else if (next[1] <= floor(next[0],next[2])) {
+        impact(from,next);
+        meteors.splice(i,1);
+      } else if (rock.age > 13) {
+        meteors.splice(i,1);
+      } else {
+        rock.pos = next;
+      }
+    }
+  }
+
+  function stepWeather(dt, difficultyId) {
+    let warning = "", nearest = Infinity;
+    const tier = difficultyId === "ace" ? 2 : difficultyId === "normal" ? 1 : 0;
+    const threshold = [1.36,.80,.48][tier];
+    for (let i = weather.length-1; i >= 0; i--) {
+      const cell = weather[i];
+      cell.age += dt;
+      cell.strength = smooth(cell.age/1.65)*smooth((cell.lifetime-cell.age)/2.8);
+      if (cell.age >= cell.lifetime) {
+        weather.splice(i,1);
+        continue;
+      }
+      const step = add(cell.pos,cell.drift,dt);
+      if (world.biome(step[0],step[2]) === rules[cell.kind].biome) {
+        cell.pos[0] = step[0];
+        cell.pos[2] = step[2];
+      } else {
+        cell.drift[0] *= -1;
+        cell.drift[2] *= -1;
+      }
+      const terrain = floor(cell.pos[0],cell.pos[2]);
+      cell.pos[1] += (terrain - 16 - cell.pos[1])*(1-Math.exp(-dt*2.6));
+      const range = Math.hypot(state.pos[0]-cell.pos[0],state.pos[2]-cell.pos[2]);
+      const vertical = (state.pos[1]-cell.pos[1])/cell.height;
+      if (range < cell.radius + 500 && vertical < 1.22 && vertical > -.20 &&
+          cell.strength > .24 && range < nearest) {
+        nearest = range;
+        warning = rules[cell.kind].alert;
+      }
+      const core = cell.kind === "tornado" ? .33 + .65*smooth(vertical)*smooth(vertical) : .80;
+      const exposed = difficultyId !== "free" && cell.strength > .64 &&
+        vertical > 0 && vertical < .93 && range < cell.radius*core;
+      if (exposed) {
+        cell.exposure += dt;
+        const limit = cell.kind === "tornado" ? threshold*.56 : threshold;
+        if (cell.exposure >= limit && state.time >= cell.nextHit) {
+          cell.nextHit = state.time + .24;
+          const rule = rules[cell.kind];
+          if (applyDamage(rule.damage[tier],cell.kind,rule.strike)) {
+            cell.exposure = 0;
+            counts[cell.kind+"Hits"]++;
+          }
+        }
+      } else {
+        cell.exposure = Math.max(0,cell.exposure-dt*2);
+      }
+    }
+    return warning;
+  }
+
+  function setMode(difficultyId) {
+    if (difficultyId === lastDifficulty) return;
+    reset();
+    lastDifficulty = difficultyId;
+    if (difficultyId === "ace") meteorDue = state.time + random(10,19);
+  }
+
+  function update(dt, difficultyId = state.difficulty) {
+    if (difficultyId === true) difficultyId = "ace";
+    if (difficultyId === false) difficultyId = state.difficulty;
+    setMode(difficultyId);
+    const oldPlayer = previous || state.pos;
+    previous = [...state.pos];
+    if (difficultyId === "ace") {
+      if (state.time >= meteorDue && !meteors.length) {
+        meteor();
+        meteorDue = state.time + random(20,36);
+      }
+      stepMeteors(dt,oldPlayer);
+    }
+    for (const [kind, rule] of Object.entries(rules)) {
+      const zone = world.biomes?.[rule.biome];
+      if (!zone) continue;
+      const [x,z] = nearestTile(zone);
+      const close = Math.hypot(state.pos[0]-x,state.pos[2]-z) < Math.max(zone.spanX,zone.spanZ)+1430;
+      if (!close) {
+        weatherDue[kind] = Infinity;
+        continue;
+      }
+      if (weatherDue[kind] === Infinity) weatherDue[kind] = state.time + random(...rule.wait);
+      if (state.time >= weatherDue[kind] && !weather.some(cell => cell.kind === kind)) {
+        weatherDue[kind] = state.time + (storm(kind) ? random(26,44) : random(4.5,8.0));
+      }
+    }
+    const localWarning = stepWeather(dt,difficultyId);
+    state.hazardWarning = meteors.length && state.time < meteorAlertAt ? "METEOR INCOMING" : localWarning;
+  }
+
+  function spawn(kind, center) {
+    setMode(state.difficulty);
+    if (kind === "meteor") {
+      if (state.difficulty !== "ace" || meteors.length) return false;
+      meteor();
+      meteorDue = Math.max(meteorDue,state.time+20);
+      return true;
+    }
+    return !!rules[kind] && !weather.some(cell => cell.kind === kind) && storm(kind,center);
+  }
+
+  return {update,reset,spawn,stats:()=>({...counts,activeMeteors:meteors.length,activeWeather:weather.length})};
+}
+
+
+function createPatrolDragon(state, fx, world, sound, damagePlayer) {
+  const tau = Math.PI * 2;
+  const vertical = [0,1,0];
+  const styles = {
+    ram: {warning:'DRAGON RAM INCOMING', source:'dragonRam', wind:1.50, speed:545, damage:[31,40]},
+    claw: {warning:'DRAGON CLAW INCOMING', source:'dragonClaw', wind:1.64, speed:416, damage:[21,29]},
+    breath: {warning:'DRAGON BREATH INCOMING', source:'dragonBreath', wind:1.93, speed:108, damage:[34,44]}
+  };
+  const patterns = Object.keys(styles);
+  const count = 34;
+  const spacing = 14;
+  const sides = 6;
+  let dragon = null;
+  let clock = 0;
+  let arriveAt = 8;
+  let encounters = 0;
+  let attacks = {ram:0,claw:0,breath:0};
+  let previousPlayer = [...state.pos];
+
+  const cap = (v, a, b) => Math.max(a,Math.min(b,v));
+  const add = (a,b,s=1) => [a[0]+b[0]*s,a[1]+b[1]*s,a[2]+b[2]*s];
+  const difference = (a,b) => [a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+  const dot = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const cross = (a,b) => [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const length = p => Math.hypot(...p);
+  const unit = p => add([0,0,0],p,1/(length(p)||1));
+  const blend = (a,b,t) => add(a,difference(b,a),t);
+  const direction = h => [Math.sin(h),0,Math.cos(h)];
+  const surface = (x,z) => Math.max(world.waterLevel||0,world.height(x,z));
+
+  function basis(forward) {
+    const right = Math.abs(forward[1])>.97 ? unit(cross([0,0,1],forward)) : unit(cross(vertical,forward));
+    return {forward,right,up:unit(cross(forward,right))};
+  }
+
+  function pan(point) {
+    return state.right ? dot(unit(difference(point,state.pos)),state.right)*.69 : 0;
+  }
+
+  function arrive() {
+    const fwd = direction(state.heading);
+    const side = basis(fwd).right;
+    const crossFrom = encounters%2===0 ? -1 : 1;
+    const pos = add(add(state.pos,fwd,1130),side,510*crossFrom);
+    pos[1] = Math.max(pos[1]+46,surface(pos[0],pos[2])+170);
+    const course = unit(add(add([0,0,0],fwd,.24),side,-crossFrom));
+    const points = [pos];
+    for(let i=1;i<=count+4;i++) points.push(add(pos,course,-i*spacing));
+    dragon = {
+      pos, dir:course, course, points, trace:pos, born:clock, phase:'glide', side:crossFrom,
+      nextMove:0, decide:clock+3.7, motion:null, hit:false
+    };
+    encounters++;
+    sound.play('inbound',.35,pan(pos));
+  }
+
+  function travel(aim,speed,turn,dt) {
+    const d=dragon;
+    const prior=d.pos;
+    d.dir=unit(blend(d.dir,aim,1-Math.exp(-turn*dt)));
+    d.pos=add(d.pos,d.dir,speed*dt);
+    d.pos[1]=Math.max(d.pos[1],surface(d.pos[0],d.pos[2])+48);
+    d.dir=unit(difference(d.pos,prior));
+    const step=difference(d.pos,d.trace);
+    const dist=length(step);
+    if(dist>=spacing) {
+      const samples=Math.min(6,Math.floor(dist/spacing));
+      for(let i=1;i<=samples;i++) d.points.unshift(add(d.trace,step,i*spacing/dist));
+      d.trace=d.points[0];
+      d.points.length=count+5;
+    }
+  }
+
+  function seek(target,yOffset=0) {
+    const aim=difference(target,dragon.pos);
+    aim[1]+=yOffset;
+    return unit(aim);
+  }
+
+  function anticipate(seconds) {
+    const heading=state.forward||direction(state.heading);
+    const point=add(state.pos,heading,Math.min(410,seconds*state.speed));
+    point[1]=Math.max(point[1],surface(point[0],point[2])+32);
+    return point;
+  }
+
+  function ready(difficulty) {
+    const d=dragon;
+    const type=patterns[d.nextMove++ % patterns.length];
+    const config=styles[type];
+    const wind=config.wind*(difficulty==='ace'?.8:1);
+    const range=length(difference(d.pos,state.pos));
+    const target=anticipate(wind+cap(range/(type==='breath'?740:config.speed),.45,1.6));
+    const velocity=add([0,0,0],state.forward||direction(state.heading),state.speed);
+    d.motion={type,target,config,wind,since:clock,playerOrigin:[...state.pos],velocity,damage:config.damage[Number(difficulty==='ace')]};
+    d.phase='windup';
+    d.hit=false;
+    sound.play('hostile',.84,pan(d.pos));
+  }
+
+  function commit() {
+    const d=dragon;
+    const a=d.motion;
+    // Continue aiming at the course the pilot held when the warning began.
+    const forecast=add(a.playerOrigin,a.velocity,clock-a.since);
+    const reach=a.type==='claw'?90:a.type==='ram'?24:28;
+    const speed=a.type==='breath'?1140:a.config.speed;
+    const relative=difference(forecast,d.pos);
+    const opening=Math.max(1,speed*speed-dot(a.velocity,a.velocity));
+    const course=dot(relative,a.velocity)-speed*reach;
+    const gap=dot(relative,relative)-reach*reach;
+    const time=cap((course+Math.sqrt(Math.max(0,course*course+opening*gap)))/opening,.05,4.9);
+    a.target=add(forecast,a.velocity,time);
+    if(a.type==='claw') a.target[1]+=40;
+    a.dir=seek(a.target);
+    a.start=d.pos;
+    a.cast=clock;
+    a.range=length(difference(a.target,d.pos));
+    a.base=basis(a.dir);
+    a.duration=a.type==='breath' ? 1.43 : cap((a.range+120)/a.config.speed,.62,5.6);
+    a.slashAt=cap(time-.21,.045,a.duration-.44);
+    d.phase='strike';
+    attacks[a.type]++;
+    sound.play(a.type==='breath'?'eruption':'inbound',a.type==='breath'?.67:.56,pan(d.pos));
+  }
+
+  function contact(a,b,c,d) {
+    const start=difference(a,c);
+    const end=difference(b,d);
+    const delta=difference(end,start);
+    const t=cap(-dot(start,delta)/Math.max(.0001,dot(delta,delta)),0,1);
+    return length(add(start,delta,t));
+  }
+
+  function hurt(type) {
+    if(dragon.hit) return;
+    dragon.hit=true;
+    damagePlayer(dragon.motion.damage,styles[type].source);
+  }
+
+  function slashPosition(elapsed) {
+    const a=dragon.motion;
+    const q=cap((elapsed-a.slashAt)/.42,0,1);
+    const sweep=(q-.5)*2.06;
+    const reach=47+10*Math.sin(q*Math.PI);
+    const mid=add(add(dragon.pos,a.base.forward,45),a.base.up,-20);
+    return add(add(add(mid,a.base.right,Math.sin(sweep)*reach),a.base.up,-27*Math.sin(q*Math.PI)),a.base.forward,Math.cos(sweep)*reach);
+  }
+
+  function breathLength(elapsed) {
+    return cap((elapsed-.14)*1140,0,1120);
+  }
+
+  function strike(dt, playerStart) {
+    const d=dragon, a=d.motion;
+    const elapsed=clock-a.cast;
+    const head=d.pos;
+    const priorSlash=a.type==='claw' ? slashPosition(elapsed-dt) : null;
+    travel(a.dir,a.config.speed,14,dt);
+    if(a.type==='ram') {
+      const from=add(head,a.dir,29), to=add(d.pos,a.dir,29);
+      if(contact(from,to,playerStart,state.pos)<48) hurt('ram');
+    } else if(a.type==='claw') {
+      if(elapsed>=a.slashAt && elapsed<a.slashAt+.44 && contact(priorSlash,slashPosition(elapsed),playerStart,state.pos)<54) hurt('claw');
+    } else if(elapsed>.15 && elapsed<1.32) {
+      const mouth=add(d.pos,a.dir,49);
+      const ray=difference(state.pos,mouth);
+      const axial=dot(ray,a.dir);
+      if(axial>0 && axial<=breathLength(elapsed) && length(add(ray,a.dir,-axial))<16+axial*.098) hurt('breath');
+    }
+    if(elapsed>a.duration) {
+      d.phase='recover';
+      d.decide=clock+4.6;
+      d.recoverUntil=clock+1.1;
+      d.motion=null;
+    }
+  }
+
+  function update(dt,difficulty) {
+    if(!Number.isFinite(dt) || dt<=0) return;
+    clock+=dt;
+    const playerStart=length(difference(state.pos,previousPlayer))<90 ? previousPlayer : state.pos;
+    previousPlayer=[...state.pos];
+    state.dragonWarning='';
+    if(!dragon && clock>=arriveAt) arrive();
+    if(!dragon) return;
+    const d=dragon;
+    const distance=length(difference(d.pos,state.pos));
+    const age=clock-d.born;
+    const active=difficulty==='normal'||difficulty==='ace';
+    if(distance>4300 || age>43) {
+      dragon=null;
+      arriveAt=clock+20;
+      return;
+    }
+    if(!active && d.phase!=='glide') {
+      d.phase='glide';
+      d.motion=null;
+      d.decide=Math.max(d.decide,clock+2.5);
+    }
+    if(d.phase==='windup') {
+      state.dragonWarning=d.motion.config.warning;
+      const aim=seek(d.motion.target,28*Math.sin((clock-d.motion.since)*2));
+      travel(aim,d.motion.type==='breath'?53:121,4.4,dt);
+      if(clock-d.motion.since>=d.motion.wind) commit();
+      return;
+    }
+    if(d.phase==='strike') {
+      state.dragonWarning=d.motion.config.warning;
+      strike(dt,playerStart);
+      return;
+    }
+    if(age<2.7 && distance<1600) state.dragonWarning='DRAGON SIGHTED';
+    const weave=Math.sin(age*1.53)*.16;
+    if(active && age>3.6 && clock>=d.decide && distance>230 && distance<1540) {
+      ready(difficulty);
+      state.dragonWarning=d.motion.config.warning;
+    } else if(active && age>3.5 && clock>(d.recoverUntil||0)) {
+      const forward=direction(state.heading), right=basis(forward).right;
+      const berth=add(add(state.pos,forward,620),right,Math.cos(age*.48)*350);
+      berth[1]=Math.max(state.pos[1]+60,surface(berth[0],berth[2])+115);
+      travel(seek(berth,weave*75),difficulty==='ace'?278:255,1.44,dt);
+    } else {
+      travel(unit(add(d.phase==='recover'?d.dir:d.course,vertical,weave)),active?189:155,.91,dt);
+    }
+  }
+
+  function spine(distance) {
+    const d=dragon;
+    const remaining=length(difference(d.pos,d.trace));
+    if(distance<=remaining && remaining>.001) return blend(d.pos,d.trace,distance/remaining);
+    const along=Math.max(0,(distance-remaining)/spacing);
+    const index=Math.min(d.points.length-2,Math.floor(along));
+    return blend(d.points[index],d.points[index+1],Math.min(1,along-index));
+  }
+
+  function body() {
+    const samples=[];
+    for(let i=0;i<count;i++) {
+      const progress=i/(count-1);
+      const distance=i*spacing;
+      const at=spine(distance);
+      const direction=i===0 ? dragon.dir : unit(difference(spine(distance-5),spine(distance+5)));
+      const frame=basis(direction);
+      const ripple=Math.min(1,i/5)*(1+progress*.69);
+      const phase=clock*2.08-i*.46;
+      const p=add(add(at,frame.right,Math.sin(phase)*23*ripple),frame.up,Math.sin(phase+.8)*14*ripple);
+      const radius=(5+17*Math.pow(1-progress,.68))*(i<3?1.05:1);
+      const ring=[];
+      for(let side=0;side<sides;side++) {
+        const t=(side+.5)*tau/sides;
+        ring.push(add(add(p,frame.right,Math.cos(t)*radius),frame.up,Math.sin(t)*radius*.83));
+      }
+      samples.push({p,...frame,radius,ring});
+    }
+    return samples;
+  }
+
+  const backbone = ['#23454d','#2d6565','#519588','#80b29a'];
+  const belly = ['#705858','#af8564','#d9ae79','#f1ca91'];
+  const red = ['#573242','#824c50','#bd765c','#e2a577'];
+  const shades = ['#694f56','#a97a62','#e3ad76','#ffe0a7'];
+  const headMesh = [
+    [-14,-12,-19], [14,-12,-19], [-22,13,-16], [22,13,-16],
+    [-25,-11,11], [25,-11,11], [-22,20,8], [22,20,8],
+    [-17,-7,48], [17,-7,48], [-18,9,48], [18,9,48], [0,25,7], [0,11,55]
+  ];
+  const headFaces = [
+    [0,1,3,2],[0,4,5,1],[2,3,7,12,6],[0,2,6,4],[1,5,7,3],
+    [4,6,10,8],[5,9,11,7],[6,12,13,10],[7,11,13,12],[8,10,13,11,9],[4,8,9,5]
+  ];
+
+  function draw(canvas,camera) {
+    if(!dragon || !camera) return;
+    const ctx=canvas.getContext('2d');
+    const width=canvas.width, height=canvas.height;
+    const hd=typeof PATROL_HD!=='undefined'&&PATROL_HD;
+    const focal=height*.5/Math.tan(camera.fov*.5);
+    const focusX=width*.5, focusY=height*.5;
+    const cameraPos=camera.pos;
+    const meshes=[];
+    const sun=world.sun||[.45,.60,.55];
+    const spots=body();
+    const a=dragon.motion;
+    const striking=dragon.phase==='strike';
+    const charging=dragon.phase==='windup';
+    const shine=charging?.55+.45*Math.sin(clock*24):1;
+
+    const project = point => {
+      const offset=difference(point,cameraPos);
+      const z=dot(offset,camera.forward);
+      if(z<=5) return null;
+      return [focusX+dot(offset,camera.right)*focal/z,focusY-dot(offset,camera.up)*focal/z,z];
+    };
+    const clear = point => {
+      if(point[1]<surface(point[0],point[2])+4) return false;
+      const diff=difference(point,cameraPos);
+      for(const t of [.127,.26,.40,.55,.70,.84,.94]) {
+        const ray=add(cameraPos,diff,t);
+        if(ray[1]<surface(ray[0],ray[2])-1) return false;
+      }
+      return true;
+    };
+    const queue = (points,color,bias=0) => {
+      if(points.some(p=>!p)) return;
+      if(points.every(p=>p[0]<-1)||points.every(p=>p[0]>width+1)||points.every(p=>p[1]<-1)||points.every(p=>p[1]>height+1)) return;
+      const z=points.reduce((sum,p)=>sum+p[2],0)/points.length;
+      meshes.push({points,color,z:z+bias});
+    };
+    const face=(points,color,bias) => queue(points.map(project),color,bias);
+    const lit = (normal,colors) => colors[cap(Math.round((dot(normal,sun)+1.1)*1.5),0,colors.length-1)];
+    const rod=(from,to,start,end,color,bias=0,minimum=0) => {
+      const p=project(from), q=project(to);
+      if(!p||!q) return;
+      const dx=q[0]-p[0],dy=q[1]-p[1],l=Math.max(.001,Math.hypot(dx,dy));
+      const a=Math.max(minimum,start*focal/p[2]),b=Math.max(minimum,end*focal/q[2]);
+      const x=dy/l,y=-dx/l;
+      queue([[p[0]+x*a,p[1]+y*a,p[2]],[q[0]+x*b,q[1]+y*b,q[2]],[q[0]-x*b,q[1]-y*b,q[2]],[p[0]-x*a,p[1]-y*a,p[2]]],color,bias);
+    };
+    const plume=(point,rx,ry,color,bias=0) => {
+      const p=project(point);
+      if(!p) return;
+      const x=rx*focal/p[2], y=ry*focal/p[2];
+      const shape=[[-.94,-.18],[-.58,-.78],[.15,-.93],[.88,-.48],[1,.26],[.58,.77],[-.19,.92],[-.74,.57]];
+      queue(shape.map(([u,v])=>[p[0]+u*x,p[1]+v*y,p[2]]),color,bias);
+    };
+
+    const ringVisible=spots.map(s=>Boolean(project(s.p))&&clear(s.p));
+    const rings=spots.map(s=>s.ring.map(project));
+    for(let i=0;i<count-1;i++) {
+      if(!ringVisible[i]||!ringVisible[i+1]) continue;
+      const s=spots[i], next=spots[i+1];
+      const viewer=unit(difference(cameraPos,s.p));
+      for(let j=0;j<sides;j++) {
+        const angle=(j+1)*tau/sides;
+        const normal=add(add([0,0,0],s.right,Math.cos(angle)),s.up,Math.sin(angle));
+        if(dot(normal,viewer)<-.37) continue;
+        const palette=Math.sin(angle)<-.33?belly:backbone;
+        const n=(j+1)%sides;
+        queue([rings[i][j],rings[i+1][j],rings[i+1][n],rings[i][n]],lit(normal,palette));
+        if(palette===belly && i%2===1) {
+          rod(s.ring[j],s.ring[n],.95,.95,'#68515e85',-2,hd?.3:.26);
+        }
+      }
+      if(i%2===0 && i>0 && i<count-2) {
+        const ridge=add(s.p,s.up,s.radius*.73);
+        const end=add(next.p,next.up,next.radius*.75);
+        const tip=add(add(end,s.up,s.radius*.67+7),s.forward,-2);
+        face([ridge,tip,end],lit(s.up,red));
+        rod(ridge,tip,1.3,.75,'#edb57b',-.5,hd?.2:.19);
+      }
+    }
+    if(ringVisible[count-1]) {
+      const tail=spots[count-1];
+      const tip=add(add(tail.p,tail.forward,-29),tail.up,19*Math.sin(clock*2.5));
+      const flare=add(tail.p,tail.forward,-13);
+      for(const sign of [-1,1]) {
+        const sail=add(add(flare,tail.right,15*sign),tail.up,8*(sign+1));
+        face([add(tail.p,tail.up,4),sail,tip,add(flare,tail.up,-7)],red[sign===1?2:1]);
+        rod(flare,tip,1.6,.55,shades[2],-.8,.22);
+      }
+    }
+
+    for(const index of [5,17]) {
+      const s=spots[index];
+      if(!ringVisible[index]) continue;
+      for(const sign of [-1,1]) {
+        const q=clock*3.8-index*.23+sign*.75;
+        const swipe=a?.type==='claw'&&index===5 ? (charging?1:striking?Math.sin(cap((clock-a.cast-a.slashAt+.11)/.65,0,1)*Math.PI):0) : 0;
+        const shoulder=add(add(s.p,s.right,sign*s.radius*.55),s.up,-s.radius*.34);
+        const elbow=add(add(add(shoulder,s.right,sign*17),s.up,-17+Math.cos(q)*4+13*swipe),s.forward,-4+10*swipe);
+        const wrist=add(add(add(elbow,s.right,sign*(9+5*Math.sin(q))),s.up,-8+6*swipe),s.forward,19+24*swipe);
+        rod(shoulder,elbow,8,5.2,backbone[0]);
+        rod(shoulder,elbow,5,3.7,backbone[2],-.7);
+        rod(elbow,wrist,5.7,3.0,backbone[0]);
+        rod(elbow,wrist,3.8,2.8,backbone[2],-.6);
+        for(let toe=-1;toe<=1;toe++) {
+          const joint=add(add(add(wrist,s.right,toe*5),s.forward,10),s.up,-3);
+          const point=add(add(add(joint,s.right,toe*4),s.forward,6),s.up,-7+4*swipe);
+          rod(wrist,joint,2.6,1.7,shades[1],-.8,.23);
+          rod(joint,point,1.8,.5,swipe>.44?shades[3]:shades[2],-1.0,.2);
+        }
+      }
+    }
+
+    const d=dragon;
+    const frame=spots[0];
+    const local=([x,y,z])=>add(add(add(d.pos,frame.right,x),frame.up,y),frame.forward,z);
+    const headVisible=Boolean(project(d.pos))&&clear(d.pos);
+    if(headVisible) {
+      const eyeFacing=dot(unit(difference(cameraPos,d.pos)),frame.right);
+      const projected=headMesh.map(local).map(project);
+      for(let f=0;f<headFaces.length;f++) {
+        const indices=headFaces[f];
+        const palette=f===1||f===10?belly:backbone;
+        const shade=[0,0,3,1,2,1,2,3,3,2,2][f];
+        queue(indices.map(index=>projected[index]),palette[shade]);
+      }
+      const jaw=[[-15,-7,45],[15,-7,45],[12,-13,43],[-12,-13,43]];
+      const opened=a?.type==='breath'?(striking?15:8*shine):0;
+      jaw[2][1]-=opened;
+      jaw[3][1]-=opened;
+      face(jaw.map(local),opened>4?'#983f39':'#593f48',-2);
+      for(const sign of [-1,1]) {
+        const front=sign===1?eyeFacing:-eyeFacing;
+        const cheek=[local([sign*23,10,11]),local([sign*30,-6,-10]),local([sign*19,-13,-40])];
+        face(cheek,red[sign===1?2:1]);
+        for(let tuft=0;tuft<3;tuft++) {
+          const tip=local([sign*(27+tuft*5),-5+tuft*9,-42+Math.sin(clock*7+tuft)*8]);
+          face([local([sign*22,tuft*8-13,-10]),tip,local([sign*23,tuft*8-5,-15])],red[tuft===2?2:1]);
+        }
+        const horn=[[sign*16,19,-11],[sign*20,39,-14],[sign*28,57,-22],[sign*27,64,-33]].map(local);
+        const branch=local([sign*13,60,-27]);
+        for(let i=0;i<horn.length-1;i++) {
+          rod(horn[i],horn[i+1],4.7-i*1.24,3.8-i*1.35,shades[0],-.4,.25);
+          rod(horn[i],horn[i+1],3.4-i*.95,2.75-i*.9,shades[2],-1.1,.25);
+        }
+        rod(horn[1],branch,2.9,.85,shades[2],-1,.2);
+        if(front>-.33) {
+          const eye=[local([sign*22,13,22]),local([sign*24,15,11]),local([sign*25,10,13]),local([sign*23,9,21])];
+          face(eye,shades[3],-2);
+          rod(local([sign*24.5,13.1,16]),local([sign*24.5,10.3,15]),1.15,.69,'#402c42',-3,.35);
+          rod(local([sign*23,16,13]),local([sign*22,15,23]),2.2,.8,shades[2],-3,.38);
+          rod(local([sign*18,-3,43]),local([sign*24,-7,17]),2.3,1.9,'#263c46',-2,.4);
+        }
+        const wave=Math.sin(clock*4+sign)*12;
+        const whisker=[[sign*17,3,42],[sign*(34+wave*.1),2,50],[sign*(56+wave*.33),5,37],[sign*(72+wave*.60),14,12],[sign*(79+wave),20,-12]].map(local);
+        for(let j=0;j<whisker.length-1;j++) rod(whisker[j],whisker[j+1],1.75-j*.32,1.45-j*.29,'#f5c98c',-3,.38);
+        const chin=[[sign*9,-13,31],[sign*12,-24,24],[sign*9,-31,8+wave*.3]].map(local);
+        rod(chin[0],chin[1],3.0,2.0,shades[1],-2,.45);
+        rod(chin[1],chin[2],2.1,.6,shades[2],-2,.3);
+      }
+      if(charging && a.type==='breath') {
+        const p=local([0,0,55]);
+        plume(p,17+10*shine,14+7*shine,'#e66a5270',-6);
+        plume(p,8+8*shine,7+5*shine,'#ffd183de',-8);
+      }
+      if(striking && a.type==='ram') {
+        for(const sign of [-1,1]) {
+          const offset=25+Math.sin(clock*17+sign)*4;
+          rod(local([offset*sign,3,22]),local([(offset+10)*sign,-8,-88]),1.1,.35,'#ebd0959c',0,.27);
+        }
+      }
+    }
+
+    if(striking && a.type==='claw') {
+      const elapsed=clock-a.cast;
+      const progress=elapsed-a.slashAt;
+      if(progress>0&&progress<.47) {
+        for(let toe=-1;toe<=1;toe++) {
+          let start;
+          for(let t=0;t<=5;t++) {
+            const point=add(add(slashPosition(elapsed-(5-t)*.028),a.base.up,toe*13),a.base.forward,toe*6);
+            if(start&&clear(point)) {
+              rod(start,point,2.8,2.2,'#e9a779d0',-8,.64);
+              rod(start,point,1.3,.9,'#ffe4b4',-9,.4);
+            }
+            start=point;
+          }
+        }
+      }
+    }
+    if(striking && a.type==='breath') {
+      const elapsed=clock-a.cast;
+      const spread=breathLength(elapsed);
+      const fade=elapsed>1.14?cap((1.43-elapsed)/.29,0,1):1;
+      const mouth=add(d.pos,a.dir,49);
+      for(let n=0;n<24 && spread>1;n++) {
+        const part=n/23;
+        const dist=part*spread;
+        const wiggle=11+dist*.074;
+        const t=clock*17+n*1.7;
+        const tongue=add(add(add(mouth,a.dir,dist),a.base.right,Math.cos(t)*wiggle*.48),a.base.up,Math.sin(t)*wiggle*.52);
+        if(!clear(tongue)) continue;
+        const color=[255,107+Math.round((1-part)*94),49+Math.round((1-part)*55)];
+        plume(tongue,wiggle*.78,wiggle*.82,`rgba(176,70,69,${fade*.42})`);
+        plume(tongue,wiggle*.57,wiggle*.51,`rgba(${color.join(',')},${fade*(.57+.32*(1-part))})`,-.3);
+        if(n%3===0) plume(tongue,wiggle*.26,wiggle*.23,`rgba(255,233,171,${fade*.87})`,-.7);
+      }
+    }
+
+    meshes.sort((a,b)=>b.z-a.z);
+    ctx.save();
+    ctx.resetTransform();
+    for(const {points,color} of meshes) {
+      ctx.fillStyle=color;
+      if(hd) {
+        ctx.beginPath();
+        ctx.moveTo(points[0][0],points[0][1]);
+        for(let i=1;i<points.length;i++) ctx.lineTo(points[i][0],points[i][1]);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        const minimum=Math.max(0,Math.floor(Math.min(...points.map(p=>p[1]))));
+        const maximum=Math.min(height,Math.ceil(Math.max(...points.map(p=>p[1]))));
+        for(let y=minimum;y<maximum;y++) {
+          let lo=Infinity,hi=-Infinity;
+          const sample=y+.5;
+          for(let i=0;i<points.length;i++) {
+            const p=points[i], q=points[(i+1)%points.length];
+            if((p[1]>sample)===(q[1]>sample)) continue;
+            const cut=p[0]+(q[0]-p[0])*(sample-p[1])/(q[1]-p[1]);
+            lo=Math.min(lo,cut);
+            hi=Math.max(hi,cut);
+          }
+          if(hi>lo) ctx.fillRect(Math.round(lo),y,Math.max(1,Math.round(hi)-Math.round(lo)),1);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  function reset() {
+    clock=0;
+    arriveAt=8;
+    dragon=null;
+    encounters=0;
+    attacks={ram:0,claw:0,breath:0};
+    previousPlayer=[...state.pos];
+    state.dragonWarning='';
+  }
+
+  const stats=()=>({active:Boolean(dragon), phase:dragon?.phase||'absent', position:dragon?.pos.slice()||null, encounters, attacks:{...attacks}});
+  return {update,draw,reset,stats};
+}
+
+
+function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
+  const modes = {
+    free: ['自由飞行', 'Free flight'], easy: ['简单', 'Easy'],
+    normal: ['标准', 'Standard'], ace: ['王牌', 'Ace']
+  };
+  const key = 'patrol:leaderboard:v1';
+  const limit = 100;
+  const top = 5;
+  const labels = {
+    crash: ['战机坠毁', 'Aircraft lost'], exit: ['飞行结算', 'Flight complete'],
+    score: ['本局得分', 'Flight score'], name: ['用户名', 'Username'],
+    placeholder: ['输入名字', 'Enter a name'], save: ['保存成绩', 'Save score'],
+    saved: ['已保存', 'Saved'], ranks: ['本地排行榜', 'Local leaderboard'],
+    category: ['排行榜难度', 'Leaderboard difficulty'], rank: ['排名', 'Rank'],
+    points: ['得分', 'Score'], empty: ['该难度暂无成绩。', 'No scores at this difficulty yet.'],
+    local: ['成绩保存在此浏览器。', 'Scores are saved in this browser.'],
+    temporary: ['成绩暂存于本页面。', 'Scores are stored on this page for now.'],
+    replay: ['再飞一次', 'Fly again'], home: ['返回版本页', 'Back to editions'], back: ['关闭', 'Close'],
+    missing: ['请输入用户名。', 'Enter a username.'], busy: ['正在保存…', 'Saving…'],
+    placed: ['已保存。本难度排名第 {rank}。', 'Saved. Rank {rank} at this difficulty.'],
+    best: ['已保留此用户名的最高分 {score}。', 'Kept the best score for this name: {score}.'],
+    below: ['本局成绩未进入前 {limit} 名。', 'This score landed outside the top {limit}.'],
+    fallback: ['本局成绩已暂存于当前页面。', 'This score is stored on this page for now.']
+  };
+  const emptyBoards = () => Object.fromEntries(Object.keys(modes).map(id => [id, []]));
+  let memory = {name: '', boards: emptyBoards()};
+  let storageAvailable = true;
+  let result = null;
+  let shownMode = 'easy';
+  let savedName = '';
+  let working = false;
+  let english = false;
+  let format = new Intl.NumberFormat('zh-CN');
+
+  const hasMode = id => Object.hasOwn(modes, id);
+  const readLabel = tuple => tuple[Number(english)];
+  const text = (id, replacements = {}) => readLabel(labels[id]).replace(/\{(\w+)\}/g, (_, name) => replacements[name]);
+  const scoreValue = score => Number.isFinite(score) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.trunc(score))) : 0;
+  const nameValue = value => Array.from(String(value ?? '').normalize('NFC')
+    .replace(/[\p{Cc}\u200b\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/gu, '')
+    .trim()).slice(0, 18).join('');
+  const nameKey = name => name.toLowerCase();
+  const sorted = scores => scores.sort((a, b) => b.score - a.score || a.at - b.at || a.name.localeCompare(b.name));
+
+  function load() {
+    if (!storageAvailable) return memory;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return memory = {name:'', boards:emptyBoards()};
+      const stored = JSON.parse(raw);
+      const boards = emptyBoards();
+      for (const id of Object.keys(boards)) {
+        const rows = stored?.boards?.[id];
+        if (!Array.isArray(rows)) continue;
+        boards[id] = sorted(rows.flatMap(row => {
+          const name = nameValue(row?.name);
+          return name && Number.isFinite(row.score) ? [{name, score: scoreValue(row.score), at: scoreValue(row.at)}] : [];
+        })).slice(0, limit);
+      }
+      memory = {name: nameValue(stored?.name), boards};
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) storageAvailable = false;
+    }
+    return memory;
+  }
+
+  function store(records) {
+    memory = records;
+    if (storageAvailable) {
+      try { localStorage.setItem(key, JSON.stringify(records)); }
+      catch { storageAvailable = false; }
+    }
+    return storageAvailable;
+  }
+
+  const style = document.createElement('style');
+  style.textContent = `
+#patrol-records{--base:#252031;--frame:#615066;--title:#fff0dc;--sub:#d1c2d0;--key:#ffc994;--trim:#9bc9c1;box-sizing:border-box;width:min(698px,calc(100% - 28px));max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px);overflow:auto;margin:auto;padding:clamp(15px,3vw,30px);color:var(--title);background:linear-gradient(151deg,#383040,#252131 63%);border:1px solid #a78687;border-radius:10px;box-shadow:0 20px 70px #0e0b16cc;font:500 14px/1.55 system-ui,"Microsoft YaHei","PingFang SC",sans-serif;text-align:left;user-select:text;touch-action:pan-y}
+#patrol-records::backdrop{background:#14101cb5}
+#patrol-records *{box-sizing:border-box}
+#patrol-records h2,#patrol-records h3,#patrol-records p{margin:0}
+#patrol-records h2{font-size:clamp(26px,4.8vw,42px);line-height:1.18;letter-spacing:.015em;font-weight:780}
+#patrol-records h3{font-size:16px;font-weight:730;margin-bottom:8px}
+#patrol-records :is(input,button,a):focus-visible{outline:2px solid #ffe6bd;outline-offset:3px}
+#patrol-records [hidden]{display:none!important}
+.patrol-records-head{display:flex;flex-wrap:wrap;align-items:center;column-gap:14px;row-gap:6px;margin-bottom:20px}
+#patrol-records-mode{color:var(--trim);border:1px solid #5e716f;padding:2px 7px;border-radius:3px;font-size:12px;white-space:nowrap}
+#patrol-records-cause{color:var(--sub);font-size:14px;flex-basis:100%}
+.patrol-records-grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:16px}
+#patrol-records[data-context=browse]{width:min(460px,calc(100% - 28px))}
+#patrol-records[data-context=browse] .patrol-records-grid{grid-template-columns:minmax(0,1fr)}
+.patrol-records-run,.patrol-records-board{min-width:0;padding:14px;border:1px solid var(--frame);border-radius:6px;background:#211c2bd6}
+.patrol-records-caption{color:var(--sub);font-size:13px}
+#patrol-records-score{display:block;color:var(--key);font-size:clamp(42px,6.5vw,62px);line-height:1.12;font-weight:760;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;margin:0 0 12px}
+#patrol-records-form{display:grid;gap:6px}
+#patrol-records-name{min-width:0;width:100%;border:1px solid #806b80;background:#151320;color:var(--title);min-height:43px;padding:6px 9px;border-radius:4px;font:500 16px/1.4 system-ui,"Microsoft YaHei",sans-serif}
+#patrol-records-name::placeholder{color:#a59ba9}
+#patrol-records :is(button,.patrol-records-home){background:#332b40;border:1px solid #836775;border-radius:4px;color:var(--title);padding:7px 13px;min-height:40px;font:680 13px/1.4 system-ui,"Microsoft YaHei",sans-serif;cursor:pointer;text-decoration:none;text-align:center}
+#patrol-records :is(button,.patrol-records-home):hover{background:#514153;border-color:#f1bc9a}
+#patrol-records button:disabled{cursor:default;opacity:.68}
+#patrol-records #patrol-records-save{color:#251a28;background:var(--key);border-color:var(--key);font-weight:750}
+#patrol-records #patrol-records-save:hover:not(:disabled){background:#ffddb5}
+#patrol-records-status{min-height:1.4em;color:var(--trim);font-size:12px;overflow-wrap:anywhere}
+#patrol-records-error{color:#ffb297;font-size:12px}
+#patrol-records-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+#patrol-records-tabs button{min-height:31px;padding:4px 7px;font-size:11px;white-space:nowrap}
+#patrol-records-tabs button[aria-pressed=true]{color:#191b26;background:var(--trim);border-color:var(--trim)}
+#patrol-records-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+#patrol-records-table :is(th,td){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:5px 4px;color:var(--sub);border-bottom:1px solid #4b3e52;font-variant-numeric:tabular-nums}
+#patrol-records-table :is(th,td):first-child{padding-left:0;width:17%}
+#patrol-records-table :is(th,td):last-child{padding-right:0;width:37%;text-align:right}
+#patrol-records-table td.score-name{color:var(--title)}
+#patrol-records-table tr.highlight td{color:var(--key);font-weight:680}
+#patrol-records-empty{font-size:13px;color:var(--sub);padding:7px 0 5px}
+#patrol-records p#patrol-records-scope{margin-top:10px;color:var(--sub);font-size:12px}
+.patrol-records-actions{margin-top:15px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#patrol-records .patrol-records-home{display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:520px){.patrol-records-grid{grid-template-columns:minmax(0,1fr);gap:10px}.patrol-records-head{margin-bottom:13px}.patrol-records-run,.patrol-records-board{padding:12px}.patrol-records-actions{margin-top:11px}.patrol-records-actions>*{flex:1}.patrol-records-tabs button{min-height:36px}}
+`;
+  document.head.append(style);
+
+  const dialog = document.createElement('dialog');
+  dialog.id = 'patrol-records';
+  dialog.setAttribute('aria-labelledby', 'patrol-records-title');
+  dialog.innerHTML = `
+    <div class="patrol-records-head">
+      <h2 id="patrol-records-title" tabindex="-1"></h2>
+      <span id="patrol-records-mode"></span>
+      <p id="patrol-records-cause" hidden></p>
+    </div>
+    <div class="patrol-records-grid">
+      <section class="patrol-records-run" id="patrol-records-run" aria-labelledby="patrol-records-score-caption">
+        <p class="patrol-records-caption" id="patrol-records-score-caption"></p>
+        <strong id="patrol-records-score"></strong>
+        <form id="patrol-records-form" novalidate>
+          <label for="patrol-records-name" id="patrol-records-label"></label>
+          <input id="patrol-records-name" type="text" name="username" required maxlength="36" spellcheck="false" aria-describedby="patrol-records-error" dir="auto">
+          <p id="patrol-records-error" role="alert" hidden></p>
+          <button type="submit" id="patrol-records-save"></button>
+          <p id="patrol-records-status" role="status"></p>
+        </form>
+      </section>
+      <section class="patrol-records-board" aria-labelledby="patrol-records-board-title">
+        <h3 id="patrol-records-board-title"></h3>
+        <div id="patrol-records-tabs" role="group"></div>
+        <table id="patrol-records-table">
+          <thead><tr><th scope="col" id="patrol-records-rank"></th><th scope="col" id="patrol-records-user"></th><th scope="col" id="patrol-records-points"></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p id="patrol-records-empty"></p>
+        <p id="patrol-records-scope"></p>
+      </section>
+    </div>
+    <div class="patrol-records-actions">
+      <button type="button" id="patrol-records-replay"></button>
+      <a class="patrol-records-home" id="patrol-records-exit"></a>
+      <button type="button" id="patrol-records-close" hidden></button>
+    </div>
+  `;
+  stage.append(dialog);
+  const id = suffix => dialog.querySelector(`#patrol-records-${suffix}`);
+  const title = id('title');
+  const form = id('form');
+  const input = id('name');
+  const save = id('save');
+  const error = id('error');
+  const status = id('status');
+  const tabs = id('tabs');
+  const board = id('table');
+  const rows = board.tBodies[0];
+  const replay = id('replay');
+  const home = id('exit');
+  const dismiss = id('close');
+  if (hubHref) home.href = hubHref;
+
+  const buttons = Object.entries(modes).map(([mode, names]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.difficulty = mode;
+    button.addEventListener('click', () => {
+      shownMode = mode;
+      renderBoard();
+    });
+    tabs.append(button);
+    return {button, mode, names};
+  });
+
+  function renderBoard() {
+    const scores = load().boards[shownMode];
+    for (const {button, mode} of buttons) button.setAttribute('aria-pressed', String(mode===shownMode));
+    board.hidden = scores.length===0;
+    id('empty').hidden = !board.hidden;
+    id('scope').textContent = text(storageAvailable ? 'local' : 'temporary');
+    rows.replaceChildren();
+    const placements = scores.slice(0,top).map((entry, index) => [entry, index+1]);
+    const active = shownMode === result?.difficulty && savedName;
+    if (active) {
+      const index = scores.findIndex(entry => nameKey(entry.name) === active);
+      if (index >= top) placements.push([scores[index], index+1]);
+    }
+    for (const [entry, rank] of placements) {
+      const row = rows.insertRow();
+      row.classList.toggle('highlight', nameKey(entry.name) === active);
+      row.insertCell().textContent = String(rank);
+      const name = row.insertCell();
+      name.className = 'score-name';
+      name.textContent = entry.name;
+      name.dir = 'auto';
+      name.title = entry.name;
+      row.insertCell().textContent = format.format(entry.score);
+    }
+  }
+
+  function localize() {
+    english = typeof patrolLanguage === 'function' && patrolLanguage() === 'en';
+    format = new Intl.NumberFormat(english ? 'en-US' : 'zh-CN');
+    dialog.lang = english ? 'en' : 'zh-CN';
+    title.textContent = text(result ? result.reason : 'ranks');
+    id('mode').textContent = result ? readLabel(modes[result.difficulty]) : '';
+    id('score').textContent = result ? format.format(result.score) : '';
+    id('cause').hidden = !result?.cause;
+    id('cause').textContent = result?.cause ?? '';
+    for (const [target, label] of [
+      ['score-caption','score'],['label','name'],['board-title','ranks'],['rank','rank'],
+      ['user','name'],['points','points'],['empty','empty'],['replay','replay'],['exit','home'],['close','back']
+    ]) id(target).textContent = text(label);
+    tabs.setAttribute('aria-label', text('category'));
+    input.placeholder = text('placeholder');
+    save.textContent = text('save');
+    for (const {button, names} of buttons) button.textContent = readLabel(names);
+  }
+
+  function saveResult(flight, name) {
+    const records = load();
+    const scores = records.boards[flight.difficulty];
+    const normalized = nameKey(name);
+    const previous = scores.find(row => nameKey(row.name) === normalized);
+    const keptBest = previous && previous.score >= flight.score;
+    const best = keptBest ? previous.score : flight.score;
+    const next = scores.filter(row => nameKey(row.name) !== normalized);
+    next.push(keptBest ? previous : {name, score: flight.score, at: Date.now()});
+    sorted(next);
+    const rank = next.findIndex(row => nameKey(row.name) === normalized) + 1;
+    records.boards[flight.difficulty] = next.slice(0, limit);
+    records.name = name;
+    const persisted = store(records);
+    return {rank, best, keptBest, persisted};
+  }
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!result || working || savedName) return;
+    const name = nameValue(input.value);
+    if (!name || !/[^\s\p{Cf}]/u.test(name)) {
+      input.setAttribute('aria-invalid','true');
+      error.textContent = text('missing');
+      error.hidden = false;
+      input.focus();
+      return;
+    }
+    const flight = result;
+    working = true;
+    save.disabled = true;
+    replay.disabled = true;
+    save.textContent = text('busy');
+    error.hidden = true;
+    let saved;
+    try {
+      saved = navigator.locks?.request
+        ? await navigator.locks.request(key, () => saveResult(flight, name))
+        : saveResult(flight, name);
+    } catch {
+      saved = saveResult(flight, name);
+    } finally {
+      working = false;
+      replay.disabled = false;
+    }
+    if (result !== flight) return;
+    savedName = nameKey(name);
+    input.value = name;
+    input.readOnly = true;
+    input.removeAttribute('aria-invalid');
+    save.textContent = text('saved');
+    const {rank, best, keptBest, persisted} = saved;
+    status.textContent = !persisted ? text('fallback') : keptBest ? text('best', {score:format.format(best)})
+      : rank>limit ? text('below', {limit}) : text('placed', {rank});
+    shownMode = flight.difficulty;
+    renderBoard();
+  });
+
+  input.addEventListener('input', () => {
+    error.hidden = true;
+    input.removeAttribute('aria-invalid');
+  });
+  dialog.addEventListener('cancel', event => {
+    event.preventDefault();
+    if (!result) close();
+  });
+  dialog.addEventListener('keydown', event => event.stopPropagation());
+  dialog.addEventListener('keyup', event => event.stopPropagation());
+  home.addEventListener('click', event => { if (working) event.preventDefault(); });
+  replay.addEventListener('click', () => {
+    const flight = result;
+    close();
+    onReplay?.(flight);
+  });
+  dismiss.addEventListener('click', close);
+  window.addEventListener('storage', event => {
+    if (dialog.open && (event.key === key || event.key === null)) renderBoard();
+  });
+
+  function openDialog() {
+    const browsing = result===null;
+    dialog.dataset.context = browsing ? 'browse' : 'result';
+    id('mode').hidden = browsing;
+    id('run').hidden = browsing;
+    id('board-title').hidden = browsing;
+    replay.hidden = browsing;
+    home.hidden = browsing || !hubHref;
+    dismiss.hidden = !browsing;
+    localize();
+    renderBoard();
+    dialog.showModal();
+    if (!browsing && matchMedia('(pointer: fine)').matches) {
+      input.focus({preventScroll:true});
+      input.select();
+    } else {
+      title.focus({preventScroll:true});
+    }
+  }
+
+  function show(flight) {
+    if (dialog.open || working) return false;
+    result = {
+      reason: flight.reason === 'exit' ? 'exit' : 'crash',
+      difficulty: hasMode(flight.difficulty) ? flight.difficulty : 'easy',
+      score: scoreValue(flight.score),
+      cause: flight.reason !== 'exit' && typeof flight.cause === 'string' ? flight.cause : ''
+    };
+    shownMode = result.difficulty;
+    savedName = '';
+    input.readOnly = false;
+    input.value = load().name;
+    input.removeAttribute('aria-invalid');
+    error.hidden = true;
+    status.textContent = '';
+    save.disabled = false;
+    openDialog();
+    return true;
+  }
+
+  function browse(difficulty) {
+    if (dialog.open || working) return false;
+    result = null;
+    savedName = '';
+    shownMode = hasMode(difficulty) ? difficulty : 'easy';
+    openDialog();
+    return true;
+  }
+
+  function close() {
+    if (dialog.open) dialog.close();
+    result = null;
+  }
+
+  return {show, browse, close, isOpen: () => dialog.open};
+}
+
+
+function createPatrolLoadout(state, world, sound) {
+  const weapons = [
+    {id:"missile",label:"Homing missiles",offsets:[0],speed:760,accel:540,turn:8.8,seeker:true},
+    {id:"lance",label:"Ion lance",offsets:[0],speed:1120,accel:900,turn:5.8,seeker:true},
+    {id:"spread",label:"Triad rockets",offsets:[-.12,0,.12],speed:810,accel:600,turn:7.6,seeker:true}
+  ];
+  const parts = [
+    ["Extended wings fitted", "#70ece2"],
+    ["Tall fins fitted", "#ffbc77"],
+    ["Nova engines fitted", "#ef98ff"]
+  ];
+  const unlocked = [weapons[0]];
+  const drops = [];
+  let selected = 0, chain = 0, lastKill = -Infinity, misses = 0;
+  let hint = "", hintUntil = 0;
+  let dodgeAt = -10, dodgeReadyAt = 0, shiftSide = 1, distance = 0;
+  const drawMath = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+
+  function report(text, seconds = 2.4) {
+    hint=text;
+    hintUntil=state.time+seconds;
+  }
+
+  function switchWeapon() {
+    if(unlocked.length<2) return;
+    selected=(selected+1)%unlocked.length;
+    sound.play("reload",.35);
+  }
+
+  function activateDodge(direction, boosted) {
+    if(state.time<dodgeReadyAt) return false;
+    shiftSide=Math.sign(direction)||-shiftSide;
+    dodgeAt=state.time;
+    distance=boosted?94:67;
+    dodgeReadyAt=state.time+(state.upgradeLevel===3?2.6:4.1);
+    report(boosted?"Afterburner roll":"Pulse dodge",1.05);
+    sound.play("reload",.73,shiftSide*.45);
+    return true;
+  }
+
+  function dodge(direction) {
+    if(!activateDodge(direction,false)) report("Dodge recharging",.8);
+  }
+
+  function afterburnerRoll(direction) {
+    if(state.throttle>.38) activateDodge(direction,true);
+  }
+
+  function dodging() {
+    return state.time-dodgeAt<.38;
+  }
+
+  function shift(dt) {
+    if(!dodging()) return;
+    const progress=(state.time-dodgeAt)/.38;
+    const speed=distance*(1-Math.cos(progress*Math.PI*2))/.38;
+    const side=shiftSide*speed*dt;
+    state.pos[0]+=Math.cos(state.heading)*side;
+    state.pos[2]-=Math.sin(state.heading)*side;
+  }
+
+  function defeat(enemy) {
+    chain=state.time-lastKill<7?chain+1:1;
+    lastKill=state.time;
+    if(chain>1) state.score+=Math.min(chain-1,4)*25;
+    const options=weapons.slice(1).filter(weapon=>!unlocked.includes(weapon)).map(weapon=>weapon.id);
+    if(state.upgradeLevel<parts.length) options.push("part","part");
+    if(!options.length) return;
+    if(Math.random()>.42 && ++misses<3) return;
+    misses=0;
+    const kind=options[Math.floor(Math.random()*options.length)];
+    if(drops.some(drop=>drop.kind===kind)) return;
+    const pos=[...enemy.pos];
+    pos[1]=Math.max(pos[1],world.waterLevel+28,world.height(pos[0],pos[2])+28);
+    drops.push({kind,pos,born:state.time});
+    if(drops.length>6) drops.shift();
+    report("Salvage nearby");
+  }
+
+  function pick(kind) {
+    if(kind==="part") {
+      if(state.upgradeLevel>=parts.length) return;
+      const part=parts[state.upgradeLevel++];
+      state.health=Math.min(100,state.health+24);
+      report(part[0],3.0);
+    } else {
+      const weapon=weapons.find(value=>value.id===kind);
+      if(!weapon || unlocked.includes(weapon)) return;
+      unlocked.push(weapon);
+      selected=unlocked.length-1;
+      report(weapon.label,2.7);
+    }
+    sound.play("reload",.84);
+  }
+
+  function update() {
+    for(let i=drops.length-1;i>=0;i--) {
+      const drop=drops[i];
+      if(state.time-drop.born>25) drops.splice(i,1);
+      else if(Math.hypot(...drop.pos.map((n,axis)=>n-state.pos[axis]))<175) {
+        drops.splice(i,1);
+        pick(drop.kind);
+      }
+    }
+  }
+
+  function draw(tactical, camera) {
+    if(!drops.length && !dodging()) return;
+    const ctx=tactical.getContext("2d");
+    const width=tactical.width, height=tactical.height;
+    const focal=height*.5/Math.tan(camera.fov*.5);
+    ctx.save();
+    if(dodging()) {
+      const opacity=(1-(state.time-dodgeAt)/.38)*.55;
+      ctx.strokeStyle="rgba(184,241,230,"+opacity+")";
+      ctx.lineWidth=PATROL_HD?3:1;
+      for(const sign of [-1,1]) {
+        for(let i=0;i<5;i++) {
+          const x=sign<0?i*width*.038:width-i*width*.038;
+          const y=height*(.23+.128*i);
+          ctx.beginPath();
+          ctx.moveTo(x,y);
+          ctx.lineTo(x-sign*width*.19,y+height*.035*shiftSide);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.font=(PATROL_HD?Math.max(10,Math.round(height*.017)):10)+"px monospace";
+    ctx.textAlign="center";
+    for(const drop of drops) {
+      const d=drop.pos.map((n,axis)=>n-camera.pos[axis]);
+      const z=drawMath(d,camera.forward);
+      if(z<12) continue;
+      const x=Math.round(width*.5+focal*drawMath(d,camera.right)/z);
+      const y=Math.round(height*.5-focal*drawMath(d,camera.up)/z);
+      if(x<8||x>width-8||y<10||y>height-19) continue;
+      const size=PATROL_HD?Math.max(7,height*.012):6;
+      const tint=drop.kind==="part"?(parts[state.upgradeLevel]??parts.at(-1))[1]:"#8aeaff";
+      ctx.fillStyle="#201c31ec";
+      ctx.strokeStyle=tint;
+      ctx.lineWidth=PATROL_HD?2:1;
+      ctx.beginPath();
+      ctx.moveTo(x,y-size);
+      ctx.lineTo(x+size,y);
+      ctx.lineTo(x,y+size);
+      ctx.lineTo(x-size,y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle=tint;
+      const label=drop.kind==="part"?"Airframe upgrade":weapons.find(item=>item.id===drop.kind).label;
+      const text=patrolText(label)+" "+Math.round(Math.hypot(...drop.pos.map((n,axis)=>n-state.pos[axis])))+"m";
+      ctx.strokeStyle="#201c31";
+      ctx.lineWidth=3;
+      ctx.strokeText(text,x,y+size+12);
+      ctx.fillText(text,x,y+size+12);
+    }
+    ctx.restore();
+  }
+
+  return {
+    dodge, dodging, afterburnerRoll, shift, draw, defeat, update, switchWeapon,
+    weapon:()=>unlocked[selected], weaponCount:()=>unlocked.length,
+    combo:()=>state.time-lastKill<7?chain:0,
+    notice:()=>state.time<hintUntil?hint:"",
+    dodgeCooldown:()=>Math.max(0,dodgeReadyAt-state.time),
+    stats:()=>({weapons:unlocked.map(weapon=>weapon.id),selected:unlocked[selected].id,
+      drops:drops.map(drop=>({...drop,pos:[...drop.pos]})),chain,level:state.upgradeLevel})
+  };
+}
 
 
 (() => {
@@ -4095,16 +5990,23 @@ const shieldPips = [...byId("shield").querySelectorAll("i")];
 const notice = byId("notice");
 const rollStatus = byId("rollStatus");
 const rollButton = byId("roll");
+const healthMeter = byId("health");
+const healthValue = byId("healthValue");
+const clockReadout = byId("worldTime");
+const zoneReadout = byId("region");
+const weaponButton = byId("weaponSwitch");
+const comboReadout = byId("combo");
+const loadoutNotice = byId("loadoutNotice");
 const difficultyButton=byId("difficultyButton");
 const difficultyMenu=byId("difficultyMenu");
 const resumeButton=byId("resumeFlight");
 const modeOptions=[...stage.querySelectorAll("button[data-difficulty]")];
 const languageOptions=[...stage.querySelectorAll("button[data-language]")];
 const difficulties=Object.freeze({
-  free:{id:"free",name:"Free flight",steering:.82,tip:"Explore the lake, mountains, and volcano without taking damage."},
-  easy:{id:"easy",name:"Easy",steering:.83,tip:"Steadier steering, forgiving aim, and faster missile reloads."},
-  normal:{id:"normal",name:"Standard",steering:.96,tip:"Regular patrols, staggered bird dives, and balanced aim assist."},
-  ace:{id:"ace",name:"Ace",steering:1.08,tip:"Faster attacks, tighter aim assist, and slower shield recovery."}
+  free:{id:"free",name:"Free flight",steering:.82,tip:"Explore the map without damage, with ground avoidance."},
+  easy:{id:"easy",name:"Easy",steering:.83,tip:"Ground avoidance, forgiving aim, and faster missile reloads."},
+  normal:{id:"normal",name:"Standard",steering:.96,tip:"Manual ground avoidance. Watch for storms and hostile dragons."},
+  ace:{id:"ace",name:"Ace",steering:1.08,tip:"Manual ground avoidance, stronger enemies, and falling meteors."}
 });
 const difficultyKey="patrol:flight-difficulty";
 const bestKey="patrol:best-scores";
@@ -4146,11 +6048,30 @@ const state = {
   pos: [-620, 1220, -1450], heading: .08, pitch: -.025, bank: 0, roll: 0,
   speed: 192, engine: .59, time: 0, throttle: 0,
   verticalSpeed: 0, radarHeight: 1000, warning: "", g: 1, slip: 0, turnRate: 0,
-  difficulty:difficulty.id, terrainAhead: 0, waterProximity: 0, rails: [0, 0, 0, 0], external: 1, interior: 0
+  health:100, upgradeLevel:0, clockMinutes:1005, difficulty:difficulty.id, terrainAhead: 0, waterProximity: 0, rails: [0, 0, 0, 0], external: 1, interior: 0
 };
 const fx = {missiles: [], impacts: [], vapor: [[], []], wake: []};
 const input = {x: 0, y: 0, active: false, downAt: -1, touchBurn: false};
-let world, airframe, cockpit, camera, combat;
+let world, airframe, cockpit, camera, combat, hazards, dragon, loadout;
+let nextDifficulty = null, runEnded = false, crashAt = -1;
+let damageAt = -10, damageCause = "";
+let shownHealth = -1, shownClock = -1, shownRegion = "", shownLoadout = "";
+const damageLabels = Object.freeze({
+  fighter:"FIGHTER HIT", bird:"BIRD STRIKE", lava:"LAVA HIT", terrain:"TERRAIN COLLISION", water:"WATER COLLISION",
+  meteor:"METEOR STRIKE", tornado:"TORNADO STRIKE", blizzard:"BLIZZARD STRIKE",
+  dragonRam:"DRAGON RAM", dragonClaw:"DRAGON CLAW", dragonBreath:"DRAGON BREATH"
+});
+const biomeLabels = Object.freeze({snow:"Snow range",desert:"Dune sea",autumn:"Autumn country",water:"Lake country"});
+const records = createPatrolRecords({
+  stage,
+  hubHref: location.protocol === "file:" ? null : "./play.html",
+  onReplay() {
+    if(nextDifficulty) {
+      try { localStorage.setItem(difficultyKey,nextDifficulty); } catch {}
+    }
+    location.reload();
+  }
+});
 const sound = createPatrolSound();
 let view = 1, weights = [0, 1, 0], oldWeights = [...weights], transitionAt = -2;
 let menuOpen = true, rollAt = -2, lastFire = -1, lastRail = -1;
@@ -4268,12 +6189,18 @@ function renderLanguage() {
   drawProgressText();
   renderDifficulty();
   visibleShield=-1;
+  shownRegion=shownLoadout="";
   displayedAmmo=-1;
   if(cockpit) draw();
 }
 
 function chooseDifficulty(id) {
   if(!Object.prototype.hasOwnProperty.call(difficulties,id)||id===difficulty.id) return;
+  if(!menuOpen) {
+    nextDifficulty=id;
+    finishRun("exit");
+    return;
+  }
   difficulty=difficulties[id];
   state.difficulty=id;
   try { localStorage.setItem(difficultyKey,id); } catch {}
@@ -4313,6 +6240,9 @@ for(const option of languageOptions) {
   });
 }
 difficultyButton.addEventListener("click",()=>setPaused(true));
+byId("endFlight").addEventListener("click",()=>finishRun("exit"));
+byId("rankings").addEventListener("click",()=>records.browse(difficulty.id));
+weaponButton.addEventListener("click",()=>loadout?.switchWeapon());
 resumeButton.addEventListener("click",()=>setPaused(false));
 
 function baseCameraPose() {
@@ -4399,9 +6329,45 @@ function updateMap(dt) {
   mapHeight=lerp(mapHeight,height,t);
 }
 
+function finishRun(reason) {
+  if(menuOpen || runEnded) return;
+  runEnded=true;
+  setPaused(true);
+  difficultyMenu.hidden=true;
+  records.show({
+    reason, difficulty:difficulty.id, score:state.score,
+    cause:reason==="crash"?patrolText(damageCause):""
+  });
+}
+
+function damagePlayer(amount, source) {
+  if(menuOpen || runEnded || crashAt>=0 || difficulty.id==="free") return false;
+  const collision = source==="terrain" || source==="water";
+  if(!collision && state.time-damageAt < .6) return false;
+  if(!collision && loadout?.dodging()) return false;
+  damageAt=state.time;
+  damageCause=damageLabels[source]||"AIRFRAME DAMAGED";
+  state.airHitAt=state.time;
+  state.health=Math.max(0,state.health-amount);
+  sound.play("hit",.85);
+  if(state.health===0) {
+    crashAt=state.time;
+    state.external=0;
+    fx.airBursts.push({pos:addScaled(state.pos,state.forward,6),time:.07,kind:"fighter",forward:state.forward});
+    sound.play("land",.84);
+  }
+  return true;
+}
+
 function flight(dt) {
   state.time += dt;
   const t = state.time;
+  if(crashAt>=0) {
+    for(const burst of fx.airBursts) burst.time+=dt;
+    if(t-crashAt >= .70) finishRun("crash");
+    return;
+  }
+  if(!menuOpen) state.clockMinutes=(state.clockMinutes+dt*3)%1440;
   const turning = smooth(clamp((t-transitionAt)/1.06, 0, 1));
   weights = oldWeights.map((n, i) => lerp(n, i === view ? 1 : 0, turning));
   state.interior = smooth(clamp((weights[2] - .35)/.65, 0, 1));
@@ -4454,9 +6420,11 @@ function flight(dt) {
   const terrainThreat = landRidge > state.pos[1]-100;
   const descent = state.speed*Math.max(0, -Math.sin(Math.min(state.pitch, pitchGoal)));
   const waterCushion = 20 + descent*.159;
-  const avoidingGround = requiredSlope > Math.tan(pitchGoal) &&
+  const groundThreat = requiredSlope > Math.tan(pitchGoal) &&
     (state.radarHeight < (aboveWater ? waterCushion : 75) || terrainThreat);
-  state.warning = avoidingGround ? "PULL UP" : (state.radarHeight < 55 ? "LOW ALT" : "");
+  const protectedFlight = menuOpen || difficulty.id==="free" || difficulty.id==="easy";
+  const avoidingGround = groundThreat && protectedFlight;
+  state.warning = groundThreat ? "PULL UP" : (state.radarHeight < 55 ? "LOW ALT" : "");
   if (avoidingGround) {
     const margin = aboveWater && !terrainThreat ? .009 : .095;
     pitchGoal = Math.max(pitchGoal, Math.atan(requiredSlope) + margin);
@@ -4466,8 +6434,15 @@ function flight(dt) {
   state.pitch = lerp(state.pitch, clamp(pitchGoal, -.59, .78), follow(avoidingGround ? 6.2 : 3.15, dt));
   Object.assign(state, attitude(state.heading, state.pitch, state.roll));
   state.pos = addScaled(state.pos, state.forward, state.speed*dt);
+  loadout.shift(dt);
   const newFloor = surface(state.pos[0], state.pos[2]);
-  state.pos[1] = Math.max(state.pos[1], newFloor + (newFloor === world.waterLevel ? 13 : 23));
+  const overWater = newFloor === world.waterLevel;
+  if(protectedFlight) state.pos[1] = Math.max(state.pos[1], newFloor+(overWater?13:23));
+  else if(state.pos[1]<=newFloor+1.4) {
+    state.pos[1]=newFloor+1.4;
+    damagePlayer(100,overWater?"water":"terrain");
+    return;
+  }
   state.radarHeight = state.pos[1] - newFloor;
   const surf=newFloor===world.waterLevel?smooth(clamp((110-state.radarHeight)/92,0,1)):0;
   state.waterProximity=lerp(state.waterProximity,surf,follow(2.6,dt));
@@ -4481,6 +6456,12 @@ function flight(dt) {
     if (state.rails[i]===0) sound.play("reload",.34);
   }
   combat.update(dt,!menuOpen);
+  if(!menuOpen && crashAt<0) {
+    hazards.update(dt,difficulty.id);
+    dragon.update(dt,difficulty.id);
+    loadout.update(dt);
+  }
+  if(crashAt>=0) return;
   updateMap(dt);
   if (!state.warning && (state.shield===0 || state.time-state.hitAt<.85)) {
     state.warning = state.combatWarning;
@@ -4489,11 +6470,14 @@ function flight(dt) {
 }
 
 function barrelRoll() {
-  if (!menuOpen && !paused && state.time-rollAt >= rollDuration) rollAt = state.time;
+  if (!menuOpen && !paused && crashAt<0 && state.time-rollAt >= rollDuration) {
+    rollAt=state.time;
+    loadout.afterburnerRoll(input.x);
+  }
 }
 
 function fire() {
-  if (!world || menuOpen || paused || state.time-lastFire < .14) return;
+  if (!world || menuOpen || paused || crashAt>=0 || state.time-lastFire < .14) return;
   let rail = lastRail;
   for (let i = 0; i < 4; i++) {
     rail = (rail + 1) % 4;
@@ -4505,6 +6489,7 @@ function fire() {
   state.rails[rail]=difficulty.id==="easy"?2.65:4.6;
   const pos = localPoint(airframe.railOffsets[rail]);
   const contact = combat.targetForLaunch();
+  const weapon=loadout.weapon();
   let target = null;
   if (!contact && Math.abs(state.pitch) < .14) {
     const distance = clamp(state.radarHeight*2.15, 920, 3400);
@@ -4512,10 +6497,16 @@ function fire() {
     target = [x, surface(x, z)-5, z];
   }
   const dir=contact?unit(blend(state.forward,unit(contact.pos.map((value,i)=>value-pos[i])),.25)):[...state.forward];
-  fx.missiles.push({
-    pos,dir,target,contact,seek:state.pitch>-.32,speed:state.speed+120,
-    age: 0, trail: [[...pos]], lastTrace: 0
-  });
+  for(const offset of weapon.offsets) {
+    const guided=offset===0;
+    fx.missiles.push({
+      pos:[...pos], dir:guided?dir:unit(addScaled(state.forward,state.right,offset)),
+      target:guided?target:null,contact:guided?contact:null,
+      seek:guided && weapon.seeker && state.pitch>-.32, speed:state.speed+120,
+      weapon:weapon.id,maxSpeed:weapon.speed,accel:weapon.accel,turn:weapon.turn,
+      age:0,trail:[[...pos]],lastTrace:0
+    });
+  }
   shots++;
   sound.play("launch",.81,(rail-1.5)*.12);
 }
@@ -4540,7 +6531,7 @@ function simulateEffects(dt) {
   for (let i = fx.missiles.length-1; i >= 0; i--) {
     const missile = fx.missiles[i];
     missile.age += dt;
-    missile.speed = Math.min(760, missile.speed + dt*540);
+    missile.speed = Math.min(missile.maxSpeed??760, missile.speed + dt*(missile.accel??540));
     if(!missile.contact?.alive&&missile.seek&&missile.age<.80) {
       const contact=combat.seekAirTarget(missile.pos,missile.dir);
       if(contact) {
@@ -4556,7 +6547,7 @@ function simulateEffects(dt) {
     }
     if (aim && missile.age > (missile.contact?.alive ? .045 : .12)) {
       const desired = unit(aim.map((x, axis) => x-missile.pos[axis]));
-      missile.dir = unit(blend(missile.dir, desired, follow(missile.contact?.alive ? 8.8 : 5, dt)));
+      missile.dir = unit(blend(missile.dir, desired, follow(missile.contact?.alive ? (missile.turn??8.8) : 5, dt)));
     }
     const next = addScaled(missile.pos, missile.dir, missile.speed*dt);
     if (combat.intercept(missile.pos,next,missile.contact)) {
@@ -4584,8 +6575,9 @@ function simulateEffects(dt) {
 
   if (state.time >= traceAt) {
     traceAt = state.time + .030;
+    const tips=airframe.wingTips?.(state.upgradeLevel)??airframe.wingTipOffsets;
     for (let i = 0; i < 2; i++) {
-      fx.vapor[i].push(localPoint(airframe.wingTipOffsets[i]));
+      fx.vapor[i].push(localPoint(tips[i]));
       if (fx.vapor[i].length > 20) fx.vapor[i].shift();
     }
   }
@@ -4624,6 +6616,10 @@ function draw() {
   airframe.draw(camera, state, fx);
   cockpit.draw(camera, state, world);
   combat.draw(tactical,camera,!menuOpen);
+  if(!menuOpen) {
+    dragon.draw(tactical,camera);
+    loadout.draw(tactical,camera);
+  }
   if (!reticle.hidden) {
     const dz=Math.max(.01,dot(camera.forward,state.forward));
     const focal=.5/Math.tan(camera.fov*.5);
@@ -4662,6 +6658,30 @@ function updateStatus() {
     rollButton.classList.toggle("active", rolling);
   }
   if (menuOpen) return;
+  const hp=Math.ceil(state.health);
+  if(shownHealth!==hp) {
+    shownHealth=hp;
+    healthValue.textContent=String(hp);
+    healthMeter.setAttribute("aria-valuenow",String(hp));
+    healthMeter.style.setProperty("--health",hp+"%");
+    healthMeter.classList.toggle("critical",hp<=25);
+  }
+  healthMeter.classList.toggle("damaged",state.time-damageAt<.4);
+  const minute=Math.floor(state.clockMinutes);
+  if(minute!==shownClock) {
+    shownClock=minute;
+    clockReadout.textContent=String(Math.floor(minute/60)).padStart(2,"0")+":"+String(minute%60).padStart(2,"0");
+  }
+  const region=patrolText(biomeLabels[world.biome(state.pos[0],state.pos[2])]||"Autumn country");
+  if(region!==shownRegion) zoneReadout.textContent=shownRegion=region;
+  const weapon=patrolText(loadout.weapon().label);
+  if(weapon!==shownLoadout) weaponButton.textContent=shownLoadout=weapon;
+  weaponButton.disabled=loadout.weaponCount()<2;
+  comboReadout.hidden=loadout.combo()<2;
+  if(!comboReadout.hidden) comboReadout.textContent="×"+loadout.combo();
+  const actionNotice=loadout.notice();
+  loadoutNotice.hidden=!actionNotice;
+  if(actionNotice) loadoutNotice.textContent=patrolText(actionNotice);
   if(state.score!==visibleScore) {
     const gain=state.score-Math.max(0,visibleScore);
     rememberPoints(state.score);
@@ -4682,7 +6702,10 @@ function updateStatus() {
     byId("shield").setAttribute("aria-label",patrolCount("Shield {count} of 3",state.shield));
   }
   const lock=combat.lock();
-  const warnings=[state.warning,state.combatWarning].filter((text,index,array)=>text&&array.indexOf(text)===index);
+  const warnings=[state.warning,state.hazardWarning,state.dragonWarning,
+    state.time-damageAt<1.2?damageCause:"",
+    state.combatWarning || (state.health<=25?"LOW HULL":"")
+  ].filter((text,index,array)=>text&&array.indexOf(text)===index).slice(0,2);
   const targeting=lock||combat.inRange();
   const message=[...warnings,targeting].filter(Boolean).map(patrolText).join(" · ");
   if (message!==visibleNotice) {
@@ -4717,7 +6740,7 @@ function tick(now) {
   }
   const total = clamp(elapsed/1000, .001, .075);
   const steps = Math.ceil(total/.0167);
-  for (let i = 0; i < steps; i++) flight(total/steps);
+  for (let i = 0; i < steps && !paused; i++) flight(total/steps);
   draw();
   requestAnimationFrame(tick);
 }
@@ -4812,6 +6835,7 @@ function bindActionButton(button, action) {
 }
 bindActionButton(rollButton, barrelRoll);
 bindActionButton(byId("fire"), fire);
+bindActionButton(byId("dash"), ()=>loadout.dodge(input.x));
 byId("viewButton").addEventListener("click", cycleView);
 launch.addEventListener("click",()=>{
   if(!world||!menuOpen) return;
@@ -4823,6 +6847,7 @@ silentLaunch.addEventListener("click",()=>{
   start();
 });
 window.addEventListener("keydown", event => {
+  if(records.isOpen() || runEnded || crashAt>=0) return;
   if(event.code==="Escape"&&!menuOpen) {
     if(!event.repeat) {
       event.preventDefault();
@@ -4846,6 +6871,10 @@ window.addEventListener("keydown", event => {
     cycleView();
   } else if (event.code === "KeyR" && !event.altKey && !event.ctrlKey && !event.metaKey) {
     barrelRoll();
+  } else if (!menuOpen && event.code === "KeyQ") {
+    loadout.switchWeapon();
+  } else if (!menuOpen && event.code === "KeyE") {
+    loadout.dodge(input.x);
   } else if (event.code === "KeyF") {
     fire();
   } else if (event.code === "Enter" && menuOpen && event.target.tagName !== "BUTTON") {
@@ -4910,7 +6939,12 @@ async function boot() {
     airframe = createAirframe(world.gl);
     cockpit = createCockpit(panel);
     Object.assign(state, attitude(state.heading, state.pitch, 0), {view});
-    combat = createPatrolCombat(state,fx,world,sound,surface,difficulty);
+    loadout=createPatrolLoadout(state,world,sound);
+    combat = createPatrolCombat(state,fx,world,sound,surface,difficulty,{
+      damagePlayer,canHitPlayer:()=>!loadout.dodging(),onDefeat:enemy=>loadout.defeat(enemy)
+    });
+    hazards=createPatrolHazards(state,fx,world,sound,damagePlayer);
+    dragon=createPatrolDragon(state,fx,world,sound,damagePlayer);
     launch.disabled = silentLaunch.disabled = false;
     byId("loading").hidden = true;
     stage.dataset.view = "chase";
