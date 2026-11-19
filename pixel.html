@@ -464,6 +464,7 @@ kbd{font:inherit;color:var(--paper);border:1px solid #55495b;padding:1px 4px;mar
   </div>
 </main>
 <script>
+const PATROL_LEADERBOARD_API = "https://patrol-scoreboard.black-pika-8403.chatgpt.site/api/leaderboard";
 const PATROL_HD = false;
 const patrolChinese=Object.freeze({
   "Patrol":"巡航",
@@ -5426,12 +5427,16 @@ function createPatrolDragon(state, fx, world, sound, damagePlayer) {
 }
 
 
-function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
+function createPatrolRecords({stage, onReplay, hubHref = './play.html', onlineEndpoint}) {
   const modes = {
     free: ['自由飞行', 'Free flight'], easy: ['简单', 'Easy'],
     normal: ['标准', 'Standard'], ace: ['王牌', 'Ace']
   };
   const key = 'patrol:leaderboard:v1';
+  const playerStorageKey = 'patrol:online-player:v1';
+  const nameStorageKey = 'patrol:online-name:v1';
+  const online = typeof onlineEndpoint==='string' && onlineEndpoint.trim().length>0;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const limit = 100;
   const top = 5;
   const labels = {
@@ -5443,6 +5448,18 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
     points: ['得分', 'Score'], empty: ['该难度暂无成绩。', 'No scores at this difficulty yet.'],
     local: ['成绩保存在此浏览器。', 'Scores are saved in this browser.'],
     temporary: ['成绩暂存于本页面。', 'Scores are stored on this page for now.'],
+    onlineRanks: ['在线排行榜', 'Online leaderboard'],
+    onlineScope: ['所有玩家共享此榜。', 'Shared with other players.'],
+    loading: ['正在加载排行榜…', 'Loading leaderboard…'],
+    unavailable: ['暂时无法加载排行榜。', 'Leaderboard unavailable.'],
+    refresh: ['刷新排行榜', 'Refresh scores'], retry: ['重试', 'Retry'],
+    submit: ['上传成绩', 'Submit score'],
+    submitError: ['成绩尚未确认，请重试。', 'Score not confirmed. Please retry.'],
+    invalid: ['服务器未接受这条成绩。请核对名称后重试。', 'The server rejected this score. Check the name and try again.'],
+    onlineSaved: ['已上传', 'Submitted'],
+    onlinePlaced: ['成绩已确认，当前排名第 {rank}。', 'Score confirmed, ranked {rank}.'],
+    onlineKept: ['已保留最高分 {score}，当前排名第 {rank}。', 'Best score kept at {score}, ranked {rank}.'],
+    onlineUnranked: ['成绩已确认，暂未上榜。', 'Score confirmed. It is currently unranked.'],
     replay: ['再飞一次', 'Fly again'], home: ['返回版本页', 'Back to editions'], back: ['关闭', 'Close'],
     missing: ['请输入用户名。', 'Enter a username.'], busy: ['正在保存…', 'Saving…'],
     placed: ['已保存。本难度排名第 {rank}。', 'Saved. Rank {rank} at this difficulty.'],
@@ -5456,11 +5473,15 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
   let result = null;
   let shownMode = 'easy';
   let savedName = '';
+  let onlineState = {phase:'idle', entries:[], confirmation:null};
+  let boardRead = null;
+  let playerId = '';
+  let onlineName = '';
   let working = false;
   let english = false;
   let format = new Intl.NumberFormat('zh-CN');
 
-  const hasMode = id => Object.hasOwn(modes, id);
+  const hasMode = id => Object.prototype.hasOwnProperty.call(modes, id);
   const readLabel = tuple => tuple[Number(english)];
   const text = (id, replacements = {}) => readLabel(labels[id]).replace(/\{(\w+)\}/g, (_, name) => replacements[name]);
   const scoreValue = score => Number.isFinite(score) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.trunc(score))) : 0;
@@ -5501,6 +5522,121 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
     return storageAvailable;
   }
 
+  function randomId() {
+    if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6]&15)|64;
+    bytes[8] = (bytes[8]&63)|128;
+    const hex = Array.from(bytes, value => value.toString(16).padStart(2,'0')).join('');
+    return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
+  }
+
+  function loadPlayerId() {
+    if (playerId) return playerId;
+    try {
+      const stored = localStorage.getItem(playerStorageKey);
+      if (uuidPattern.test(stored||'')) return playerId=stored;
+    } catch {}
+    playerId=randomId();
+    try { localStorage.setItem(playerStorageKey,playerId); } catch {}
+    return playerId;
+  }
+
+  async function currentPlayerId() {
+    try {
+      if (navigator.locks?.request) return await navigator.locks.request(playerStorageKey,loadPlayerId);
+    } catch {}
+    return loadPlayerId();
+  }
+
+  function lastOnlineName() {
+    try { onlineName=nameValue(localStorage.getItem(nameStorageKey))||onlineName; } catch {}
+    return onlineName;
+  }
+
+  function rememberOnlineName(name) {
+    onlineName=name;
+    try { localStorage.setItem(nameStorageKey,name); } catch {}
+  }
+
+  function parseBoard(payload,difficulty) {
+    if (payload?.difficulty!==difficulty || !Array.isArray(payload.entries)) {
+      throw new Error('Invalid leaderboard response');
+    }
+    return payload.entries.slice(0,limit).map(row=>{
+      const name = nameValue(row?.name);
+      if (!name || !Number.isSafeInteger(row?.score) || row.score<0) throw new Error('Invalid leaderboard entry');
+      return {name,score:row.score,at:row.at};
+    });
+  }
+
+  async function api(difficulty,controller,submission) {
+    const url = new URL(onlineEndpoint,location.href);
+    url.searchParams.set('difficulty',difficulty);
+    const timeout = setTimeout(()=>controller.abort(),9000);
+    try {
+      const response = await fetch(url,{
+        method:submission?'POST':'GET',
+        ...(submission?{headers:{'Content-Type':'application/json'},body:JSON.stringify(submission)}:{}),
+        cache:'no-store',credentials:'omit',signal:controller.signal
+      });
+      if (!response.ok) {
+        const error = new Error('Leaderboard unavailable');
+        error.status=response.status;
+        throw error;
+      }
+      const payload=await response.json();
+      return {payload,entries:parseBoard(payload,difficulty)};
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  function cancelBoardRead() {
+    if (boardRead) boardRead.abort();
+    boardRead=null;
+  }
+
+  async function loadOnlineBoard() {
+    if (!dialog.open) return;
+    const mode=shownMode;
+    cancelBoardRead();
+    const request=new AbortController();
+    boardRead=request;
+    onlineState={phase:'loading',entries:[],confirmation:null};
+    renderBoard();
+    try {
+      const {entries}=await api(mode,request);
+      if (boardRead!==request || mode!==shownMode || !dialog.open) return;
+      onlineState={phase:'ready',entries,confirmation:null};
+    } catch {
+      if (boardRead!==request || mode!==shownMode || !dialog.open) return;
+      onlineState={phase:'unavailable',entries:[],confirmation:null};
+    } finally {
+      if (boardRead===request) {
+        boardRead=null;
+        renderBoard();
+      }
+    }
+  }
+
+  async function submitOnline(flight,name) {
+    if (!flight.submission) {
+      flight.runId ||= randomId();
+      flight.submission={
+        difficulty:flight.difficulty,name,score:flight.score,
+        runId:flight.runId,playerKey:await currentPlayerId()
+      };
+    }
+    const {payload,entries}=await api(flight.difficulty,new AbortController(),flight.submission);
+    const {rank,best,keptBest}=payload;
+    if (!(rank===null || Number.isSafeInteger(rank)&&rank>=1) ||
+      !Number.isSafeInteger(best) || best<0 || typeof keptBest!=='boolean') {
+      throw new Error('Unconfirmed score');
+    }
+    return {rank,best,keptBest,entries,persisted:true};
+  }
+
   const style = document.createElement('style');
   style.textContent = `
 #patrol-records{--base:#252031;--frame:#615066;--title:#fff0dc;--sub:#d1c2d0;--key:#ffc994;--trim:#9bc9c1;box-sizing:border-box;width:min(698px,calc(100% - 28px));max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px);overflow:auto;margin:auto;padding:clamp(15px,3vw,30px);color:var(--title);background:linear-gradient(151deg,#383040,#252131 63%);border:1px solid #a78687;border-radius:10px;box-shadow:0 20px 70px #0e0b16cc;font:500 14px/1.55 system-ui,"Microsoft YaHei","PingFang SC",sans-serif;text-align:left;user-select:text;touch-action:pan-y}
@@ -5509,6 +5645,8 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
 #patrol-records h2,#patrol-records h3,#patrol-records p{margin:0}
 #patrol-records h2{font-size:clamp(26px,4.8vw,42px);line-height:1.18;letter-spacing:.015em;font-weight:780}
 #patrol-records h3{font-size:16px;font-weight:730;margin-bottom:8px}
+.patrol-records-board-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#patrol-records .patrol-records-board-head button{margin-left:auto;min-height:32px;padding:3px 8px;font-size:11px}
 #patrol-records :is(input,button,a):focus-visible{outline:2px solid #ffe6bd;outline-offset:3px}
 #patrol-records [hidden]{display:none!important}
 .patrol-records-head{display:flex;flex-wrap:wrap;align-items:center;column-gap:14px;row-gap:6px;margin-bottom:20px}
@@ -5569,13 +5707,16 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
         </form>
       </section>
       <section class="patrol-records-board" aria-labelledby="patrol-records-board-title">
-        <h3 id="patrol-records-board-title"></h3>
+        <div class="patrol-records-board-head">
+          <h3 id="patrol-records-board-title"></h3>
+          <button type="button" id="patrol-records-refresh" hidden></button>
+        </div>
         <div id="patrol-records-tabs" role="group"></div>
         <table id="patrol-records-table">
           <thead><tr><th scope="col" id="patrol-records-rank"></th><th scope="col" id="patrol-records-user"></th><th scope="col" id="patrol-records-points"></th></tr></thead>
           <tbody></tbody>
         </table>
-        <p id="patrol-records-empty"></p>
+        <p id="patrol-records-empty" role="status"></p>
         <p id="patrol-records-scope"></p>
       </section>
     </div>
@@ -5599,36 +5740,49 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
   const replay = id('replay');
   const home = id('exit');
   const dismiss = id('close');
+  const refresh = id('refresh');
   if (hubHref) home.href = hubHref;
+  refresh.addEventListener('click',loadOnlineBoard);
 
   const buttons = Object.entries(modes).map(([mode, names]) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.difficulty = mode;
     button.addEventListener('click', () => {
-      shownMode = mode;
-      renderBoard();
+      if (shownMode===mode) return;
+      shownMode=mode;
+      if (online) void loadOnlineBoard();
+      else renderBoard();
     });
     tabs.append(button);
     return {button, mode, names};
   });
 
   function renderBoard() {
-    const scores = load().boards[shownMode];
+    const scores = online ? onlineState.entries : load().boards[shownMode];
+    const loading = online && onlineState.phase==='loading';
+    const unavailable = online && onlineState.phase==='unavailable';
     for (const {button, mode} of buttons) button.setAttribute('aria-pressed', String(mode===shownMode));
     board.hidden = scores.length===0;
     id('empty').hidden = !board.hidden;
-    id('scope').textContent = text(storageAvailable ? 'local' : 'temporary');
+    id('empty').textContent = text(loading?'loading':unavailable?'unavailable':'empty');
+    id('scope').textContent = text(online?'onlineScope':storageAvailable?'local':'temporary');
+    board.setAttribute('aria-busy',String(loading));
+    refresh.hidden = !online;
+    refresh.disabled = loading;
+    refresh.textContent = text(unavailable?'retry':'refresh');
     rows.replaceChildren();
+
     const placements = scores.slice(0,top).map((entry, index) => [entry, index+1]);
-    const active = shownMode === result?.difficulty && savedName;
-    if (active) {
-      const index = scores.findIndex(entry => nameKey(entry.name) === active);
-      if (index >= top) placements.push([scores[index], index+1]);
+    let activeRank = 0;
+    if (shownMode===result?.difficulty && savedName) {
+      activeRank = online ? (onlineState.confirmation?.rank??0)
+        : scores.findIndex(entry => nameKey(entry.name)===savedName)+1;
+      if (activeRank>top && activeRank<=scores.length) placements.push([scores[activeRank-1],activeRank]);
     }
     for (const [entry, rank] of placements) {
       const row = rows.insertRow();
-      row.classList.toggle('highlight', nameKey(entry.name) === active);
+      row.classList.toggle('highlight',rank===activeRank);
       row.insertCell().textContent = String(rank);
       const name = row.insertCell();
       name.className = 'score-name';
@@ -5643,18 +5797,19 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
     english = typeof patrolLanguage === 'function' && patrolLanguage() === 'en';
     format = new Intl.NumberFormat(english ? 'en-US' : 'zh-CN');
     dialog.lang = english ? 'en' : 'zh-CN';
-    title.textContent = text(result ? result.reason : 'ranks');
+    const ranks = online ? 'onlineRanks' : 'ranks';
+    title.textContent = text(result ? result.reason : ranks);
     id('mode').textContent = result ? readLabel(modes[result.difficulty]) : '';
     id('score').textContent = result ? format.format(result.score) : '';
     id('cause').hidden = !result?.cause;
     id('cause').textContent = result?.cause ?? '';
     for (const [target, label] of [
-      ['score-caption','score'],['label','name'],['board-title','ranks'],['rank','rank'],
+      ['score-caption','score'],['label','name'],['board-title',ranks],['rank','rank'],
       ['user','name'],['points','points'],['empty','empty'],['replay','replay'],['exit','home'],['close','back']
     ]) id(target).textContent = text(label);
     tabs.setAttribute('aria-label', text('category'));
     input.placeholder = text('placeholder');
-    save.textContent = text('save');
+    save.textContent = text(online?'submit':'save');
     for (const {button, names} of buttons) button.textContent = readLabel(names);
   }
 
@@ -5675,10 +5830,18 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
     return {rank, best, keptBest, persisted};
   }
 
+  async function submitLocal(flight,name) {
+    try {
+      if (navigator.locks?.request) return await navigator.locks.request(key,()=>saveResult(flight,name));
+    } catch {}
+    return saveResult(flight,name);
+  }
+
   form.addEventListener('submit', async event => {
     event.preventDefault();
     if (!result || working || savedName) return;
-    const name = nameValue(input.value);
+    const flight = result;
+    const name = flight.submission?.name??nameValue(input.value);
     if (!name || !/[^\s\p{Cf}]/u.test(name)) {
       input.setAttribute('aria-invalid','true');
       error.textContent = text('missing');
@@ -5686,33 +5849,50 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
       input.focus();
       return;
     }
-    const flight = result;
     working = true;
     save.disabled = true;
     replay.disabled = true;
+    input.readOnly = online;
     save.textContent = text('busy');
     error.hidden = true;
     let saved;
     try {
-      saved = navigator.locks?.request
-        ? await navigator.locks.request(key, () => saveResult(flight, name))
-        : saveResult(flight, name);
-    } catch {
-      saved = saveResult(flight, name);
+      saved = online ? await submitOnline(flight,name) : await submitLocal(flight,name);
+    } catch (failure) {
+      if (result!==flight) return;
+      const rejected = failure?.status===400 || failure?.status===422;
+      if (rejected) flight.submission=null;
+      input.readOnly=Boolean(flight.submission);
+      save.disabled=false;
+      save.textContent=text('retry');
+      error.textContent=text(rejected?'invalid':'submitError');
+      error.hidden=false;
+      return;
     } finally {
-      working = false;
-      replay.disabled = false;
+      working=false;
+      replay.disabled=false;
     }
-    if (result !== flight) return;
+    if (result!==flight) return;
     savedName = nameKey(name);
     input.value = name;
     input.readOnly = true;
     input.removeAttribute('aria-invalid');
-    save.textContent = text('saved');
-    const {rank, best, keptBest, persisted} = saved;
-    status.textContent = !persisted ? text('fallback') : keptBest ? text('best', {score:format.format(best)})
-      : rank>limit ? text('below', {limit}) : text('placed', {rank});
-    shownMode = flight.difficulty;
+    save.textContent = text(online?'onlineSaved':'saved');
+    const {rank,best,keptBest,persisted} = saved;
+    if (online) {
+      rememberOnlineName(name);
+      status.textContent = rank===null ? text('onlineUnranked')
+        : keptBest ? text('onlineKept',{score:format.format(best),rank})
+        : text('onlinePlaced',{rank});
+      if (shownMode===flight.difficulty) {
+        cancelBoardRead();
+        onlineState={phase:'ready',entries:saved.entries,confirmation:{rank}};
+      }
+    } else {
+      status.textContent = !persisted ? text('fallback') : keptBest ? text('best', {score:format.format(best)})
+        : rank>limit ? text('below', {limit}) : text('placed', {rank});
+      shownMode=flight.difficulty;
+    }
     renderBoard();
   });
 
@@ -5734,7 +5914,7 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
   });
   dismiss.addEventListener('click', close);
   window.addEventListener('storage', event => {
-    if (dialog.open && (event.key === key || event.key === null)) renderBoard();
+    if (!online && dialog.open && (event.key===key || event.key===null)) renderBoard();
   });
 
   function openDialog() {
@@ -5747,8 +5927,9 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
     home.hidden = browsing || !hubHref;
     dismiss.hidden = !browsing;
     localize();
-    renderBoard();
     dialog.showModal();
+    if (online) void loadOnlineBoard();
+    else renderBoard();
     if (!browsing && matchMedia('(pointer: fine)').matches) {
       input.focus({preventScroll:true});
       input.select();
@@ -5768,7 +5949,7 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
     shownMode = result.difficulty;
     savedName = '';
     input.readOnly = false;
-    input.value = load().name;
+    input.value = online ? lastOnlineName() : load().name;
     input.removeAttribute('aria-invalid');
     error.hidden = true;
     status.textContent = '';
@@ -5787,6 +5968,7 @@ function createPatrolRecords({stage, onReplay, hubHref = './play.html'}) {
   }
 
   function close() {
+    cancelBoardRead();
     if (dialog.open) dialog.close();
     result = null;
   }
@@ -6064,6 +6246,7 @@ const damageLabels = Object.freeze({
 const biomeLabels = Object.freeze({snow:"Snow range",desert:"Dune sea",autumn:"Autumn country",water:"Lake country"});
 const records = createPatrolRecords({
   stage,
+  onlineEndpoint: PATROL_LEADERBOARD_API,
   hubHref: location.protocol === "file:" ? null : "./play.html",
   onReplay() {
     if(nextDifficulty) {
